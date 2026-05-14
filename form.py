@@ -5,19 +5,30 @@ from datetime import date
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="Formulario RMA - ALTAVISTA SA", layout="centered")
 
-# --- LIMPIEZA VISUAL (CSS) ---
+# --- LIMPIEZA VISUAL (CSS AGRESIVO) ---
 st.markdown("""
     <style>
-    /* Oculta instrucciones de Streamlit */
-    div[data-testid="stTextInput"] [data-testid="InputInstructions"] { display: none; }
-    div[data-testid="stTextArea"] [data-testid="InputInstructions"] { display: none; }
+    /* 1. Ocultar instrucciones de teclado (Press Enter) */
+    div[data-testid="stTextInput"] [data-testid="InputInstructions"] { display: none !important; }
+    div[data-testid="stTextArea"] [data-testid="InputInstructions"] { display: none !important; }
     
-    /* Oculta el pie de página, el menú de GitHub y el encabezado */
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
-    #MainMenu {visibility: hidden;}
-
+    /* 2. Ocultar barra superior, pie de página y menús de Streamlit/GitHub */
+    #MainMenu {visibility: hidden !important;}
+    footer {visibility: hidden !important;}
+    header {visibility: hidden !important;}
+    
+    /* 3. Bloqueo de iconos flotantes (Corona roja y Perfil de usuario) */
+    .stAppDeployButton {display: none !important;}
+    stDecoration {display: none !important;}
+    [data-testid="stStatusWidget"] {display: none !important;}
+    
+    /* 4. Eliminar el cuadro flotante de GitHub al pie */
+    [data-testid="stToolbar"] {display: none !important;}
+    
+    /* Ajuste de margen superior para que no quede pegado arriba */
     .block-container { padding-top: 2rem; }
+    
+    /* Estilo del contenedor del formulario */
     [data-testid="stVerticalBlockBorderControl"] {
         border: 1px solid rgba(49, 51, 63, 0.2);
         border-radius: 0.5rem;

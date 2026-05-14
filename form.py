@@ -5,30 +5,31 @@ from datetime import date
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="Formulario RMA - ALTAVISTA SA", layout="centered")
 
-# --- LIMPIEZA VISUAL (CSS AGRESIVO) ---
+# --- LIMPIEZA VISUAL (ELIMINACIÓN TOTAL) ---
 st.markdown("""
     <style>
-    /* 1. Ocultar instrucciones de teclado (Press Enter) */
+    /* 1. Ocultar instrucciones de teclado y advertencias */
     div[data-testid="stTextInput"] [data-testid="InputInstructions"] { display: none !important; }
     div[data-testid="stTextArea"] [data-testid="InputInstructions"] { display: none !important; }
     
-    /* 2. Ocultar barra superior, pie de página y menús de Streamlit/GitHub */
-    #MainMenu {visibility: hidden !important;}
-    footer {visibility: hidden !important;}
-    header {visibility: hidden !important;}
-    
-    /* 3. Bloqueo de iconos flotantes (Corona roja y Perfil de usuario) */
-    .stAppDeployButton {display: none !important;}
+    /* 2. Ocultar TODOS los menús, pies de página y decoraciones de Streamlit */
+    #MainMenu {visibility: hidden !important; display: none !important;}
+    footer {visibility: hidden !important; display: none !important;}
+    header {visibility: hidden !important; display: none !important;}
     stDecoration {display: none !important;}
-    [data-testid="stStatusWidget"] {display: none !important;}
     
-    /* 4. Eliminar el cuadro flotante de GitHub al pie */
+    /* 3. Elminar específicamente los botones flotantes de la derecha (Corona y Perfil) */
+    .stAppDeployButton {display: none !important;}
+    [data-testid="stStatusWidget"] {display: none !important;}
+    [data-testid="stHeader"] {display: none !important;}
     [data-testid="stToolbar"] {display: none !important;}
     
-    /* Ajuste de margen superior para que no quede pegado arriba */
-    .block-container { padding-top: 2rem; }
-    
-    /* Estilo del contenedor del formulario */
+    /* 4. Selector universal para cualquier cosa que Streamlit intente poner en el pie de página */
+    [data-testid="stAppViewBlockContainer"] + div {display: none !important;}
+    div.stDeployButton {display: none !important;}
+
+    /* Ajustes estéticos del formulario */
+    .block-container { padding-top: 1rem; }
     [data-testid="stVerticalBlockBorderControl"] {
         border: 1px solid rgba(49, 51, 63, 0.2);
         border-radius: 0.5rem;

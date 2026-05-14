@@ -48,12 +48,11 @@ with st.container(border=True):
             st.rerun()
             
     else:
-        # FILA 1: Cliente y Serial (Para que el TAB salte de uno a otro)
+        # FILA 1: Cliente y Serial
         fila1_col1, fila1_col2 = st.columns(2)
         with fila1_col1:
             cliente = st.text_input("Nombre / Razón Social", placeholder="Ej: Juan Pérez o Empresa S.A.").upper()
         with fila1_col2:
-            # Se usa el nombre de columna 'Serial' con S mayúscula para Airtable
             serial = st.text_input("Serial (SN - ASA)", placeholder="Ubicado en la etiqueta")
 
         # FILA 2: Producto y Fecha de Compra
@@ -61,10 +60,16 @@ with st.container(border=True):
         with fila2_col1:
             producto = st.text_input("Producto", placeholder="Ingrese nombre de producto")
         with fila2_col2:
-            fecha_compra = st.date_input("Fecha de Compra", max_value=date.today(), format="DD/MM/YYYY"), placeholder="Dejar vacio si no recuerda")
+            # Agregado parámetro 'help' y corregida la estructura
+            fecha_compra = st.date_input(
+                "Fecha de Compra", 
+                max_value=date.today(), 
+                format="DD/MM/YYYY",
+                help="Dejar el valor predeterminado si no recuerda la fecha exacta"
+            )
+            st.caption("Dejar valor predeterminado si no recuerda")
 
-        # CONTINUACIÓN DEL FORMULARIO
-        # Se usa el nombre de campo 'Motivo del trámite' para Airtable
+        # CONTINUACIÓN
         motivo = st.selectbox(
             "Motivo del trámite",
             options=["Seleccione una opción", "RMA", "Devolución"]

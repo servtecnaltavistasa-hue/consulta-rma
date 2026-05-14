@@ -42,7 +42,7 @@ st.markdown("---")
 # --- CUERPO DEL FORMULARIO ---
 with st.container(border=True):
     if st.session_state.enviado:
-        st.success("¡Solicitud enviada con éxito! El trámite ha sido registrado correctamente.")
+        st.success("¡Solicitud enviada con éxito! En breve le asignaremos su número de RMA.")
         if st.button("REALIZAR NUEVA SOLICITUD", type="secondary", use_container_width=True):
             st.session_state.enviado = False
             st.rerun()

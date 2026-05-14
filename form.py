@@ -8,8 +8,15 @@ st.set_page_config(page_title="Formulario RMA - ALTAVISTA SA", layout="centered"
 # --- LIMPIEZA VISUAL (CSS) ---
 st.markdown("""
     <style>
+    /* Oculta instrucciones de Streamlit */
     div[data-testid="stTextInput"] [data-testid="InputInstructions"] { display: none; }
     div[data-testid="stTextArea"] [data-testid="InputInstructions"] { display: none; }
+    
+    /* Oculta el pie de página, el menú de GitHub y el encabezado */
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    #MainMenu {visibility: hidden;}
+
     .block-container { padding-top: 2rem; }
     [data-testid="stVerticalBlockBorderControl"] {
         border: 1px solid rgba(49, 51, 63, 0.2);

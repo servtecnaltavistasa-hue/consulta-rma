@@ -5,30 +5,31 @@ from datetime import date
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="Formulario RMA - ALTAVISTA SA", layout="centered")
 
-# --- LIMPIEZA VISUAL (ELIMINACIÓN TOTAL) ---
+# --- LIMPIEZA VISUAL TOTAL (BLOQUEO AGRESIVO) ---
 st.markdown("""
     <style>
-    /* 1. Ocultar instrucciones de teclado y advertencias */
+    /* 1. Ocultar instrucciones de teclado y avisos de Streamlit */
     div[data-testid="stTextInput"] [data-testid="InputInstructions"] { display: none !important; }
     div[data-testid="stTextArea"] [data-testid="InputInstructions"] { display: none !important; }
     
-    /* 2. Ocultar TODOS los menús, pies de página y decoraciones de Streamlit */
+    /* 2. Ocultar menús, encabezados y pies de página */
     #MainMenu {visibility: hidden !important; display: none !important;}
     footer {visibility: hidden !important; display: none !important;}
     header {visibility: hidden !important; display: none !important;}
     stDecoration {display: none !important;}
     
-    /* 3. Elminar específicamente los botones flotantes de la derecha (Corona y Perfil) */
+    /* 3. Eliminar botones de Deploy (corona), Perfil y Toolbar de GitHub */
     .stAppDeployButton {display: none !important;}
     [data-testid="stStatusWidget"] {display: none !important;}
     [data-testid="stHeader"] {display: none !important;}
     [data-testid="stToolbar"] {display: none !important;}
     
-    /* 4. Selector universal para cualquier cosa que Streamlit intente poner en el pie de página */
+    /* 4. Parche para eliminar el bloque que contiene el perfil de GitHub al pie */
     [data-testid="stAppViewBlockContainer"] + div {display: none !important;}
     div.stDeployButton {display: none !important;}
-
-    /* Ajustes estéticos del formulario */
+    button[title="View profile"] {display: none !important;}
+    
+    /* Ajustes estéticos */
     .block-container { padding-top: 1rem; }
     [data-testid="stVerticalBlockBorderControl"] {
         border: 1px solid rgba(49, 51, 63, 0.2);

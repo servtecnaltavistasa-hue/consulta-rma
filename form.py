@@ -41,27 +41,30 @@ st.markdown("---")
 
 # --- CUERPO DEL FORMULARIO ---
 with st.container(border=True):
-    # LÓGICA DE PANTALLA DE ÉXITO
     if st.session_state.enviado:
         st.success("¡Solicitud enviada con éxito! El trámite ha sido registrado correctamente.")
-        
-        # Al presionar este botón, cambiamos el estado y Streamlit recarga solo sin errores
         if st.button("REALIZAR NUEVA SOLICITUD", type="secondary", use_container_width=True):
             st.session_state.enviado = False
             st.rerun()
             
     else:
-        # PANTALLA DE FORMULARIO
-        col1, col2 = st.columns(2)
-        
-        with col1:
+        # FILA 1: Cliente y Serial (Para que el TAB salte de uno a otro)
+        fila1_col1, fila1_col2 = st.columns(2)
+        with fila1_col1:
             cliente = st.text_input("Nombre / Razón Social", placeholder="Ej: Juan Pérez o Empresa S.A.").upper()
-            producto = st.text_input("Producto", placeholder="Ingrese nombre de producto")
-        
-        with col2:
+        with fila1_col2:
+            # Se usa el nombre de columna 'Serial' con S mayúscula para Airtable
             serial = st.text_input("Serial (SN - ASA)", placeholder="Ubicado en la etiqueta")
+
+        # FILA 2: Producto y Fecha de Compra
+        fila2_col1, fila2_col2 = st.columns(2)
+        with fila2_col1:
+            producto = st.text_input("Producto", placeholder="Ingrese nombre de producto")
+        with fila2_col2:
             fecha_compra = st.date_input("Fecha de Compra", max_value=date.today(), format="DD/MM/YYYY")
 
+        # CONTINUACIÓN DEL FORMULARIO
+        # Se usa el nombre de campo 'Motivo del trámite' para Airtable
         motivo = st.selectbox(
             "Motivo del trámite",
             options=["Seleccione una opción", "RMA", "Devolución"]
@@ -108,11 +111,10 @@ with st.container(border=True):
                             "Telefono": telefono_val,      
                             "Email": email_val,            
                             "Estado del RMA": "PENDIENTE",
-                            "Ingreso": str(date.today())
+                            "ingreso": str(date.today())
                         }
                         
                         table.create(nuevo_registro)
-                        # Cambiamos el estado y forzamos el refresco para mostrar la pantalla de éxito
                         st.session_state.enviado = True
                         st.rerun()
                         

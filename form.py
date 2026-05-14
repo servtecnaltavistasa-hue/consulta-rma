@@ -36,7 +36,7 @@ except Exception:
 
 # --- CABECERA ---
 st.markdown("<h1 style='text-align: center;'>Solicitud de RMA / DEVOLUCION</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center;'>Complete los datos para iniciar su caso.</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center;'>Recuerde que el producto debe contar su embalaje / blíster o caja. NO SE ACEPTARÁN PRODUCTOS SIN CAJA NI NUMERO DE SERIE.</p>", unsafe_allow_html=True)
 st.markdown("---")
 
 # --- CUERPO DEL FORMULARIO ---

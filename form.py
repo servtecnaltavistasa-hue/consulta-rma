@@ -61,7 +61,7 @@ with st.container(border=True):
         with fila2_col1:
             producto = st.text_input("Producto", placeholder="Ingrese nombre de producto")
         with fila2_col2:
-            fecha_compra = st.date_input("Fecha de Compra", max_value=date.today(), format="DD/MM/YYYY")
+            fecha_compra = st.date_input("Fecha de Compra", max_value=date.today(), format="DD/MM/YYYY"), placeholder="Dejar vacio si no recuerda")
 
         # CONTINUACIÓN DEL FORMULARIO
         # Se usa el nombre de campo 'Motivo del trámite' para Airtable

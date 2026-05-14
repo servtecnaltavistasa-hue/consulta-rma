@@ -35,8 +35,8 @@ except Exception:
     st.stop()
 
 # --- CABECERA ---
-st.markdown("<h1 style='text-align: center;'>Solicitud de Gestión</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center;'>Complete los datos para iniciar su trámite.</p>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center;'>Solicitud de RMA / DEVOLUCION</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center;'>Complete los datos para iniciar su caso.</p>", unsafe_allow_html=True)
 st.markdown("---")
 
 # --- CUERPO DEL FORMULARIO ---

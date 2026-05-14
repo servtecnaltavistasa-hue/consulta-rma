@@ -65,7 +65,7 @@ with st.container(border=True):
                 "Fecha de Compra", 
                 max_value=date.today(), 
                 format="DD/MM/YYYY",
-                help="No cambiar no recuerda la fecha exacta"
+                help="No cambiar si no recuerda la fecha de compra"
             )
             st.caption("Dejar valor predeterminado si no recuerda")
 

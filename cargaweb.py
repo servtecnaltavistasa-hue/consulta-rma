@@ -4,9 +4,6 @@ import urllib.parse
 
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="RMA ALTAVISTA SA", layout="centered")
-
-# --- CREDENCIALES SEGURAS (SECRETS) ---
-# Estas líneas buscan los datos en la configuración de Streamlit Cloud
 try:
     AIRTABLE_TOKEN = st.secrets["AIRTABLE_TOKEN"]
     BASE_ID = st.secrets["BASE_ID"]

@@ -22,7 +22,7 @@ table = api.table(BASE_ID, TABLE_NAME)
 st.markdown("<h1 style='text-align: center;'>RMA ALTAVISTA SA</h1>", unsafe_allow_html=True)
 
 # --- BARRA DE BÚSQUEDA ---
-entrada_usuario = st.text_input("Ingrese Código de Cliente o Número de RMA:", value="").strip()
+entrada_usuario = st.text_input("Ingrese su Código de Cliente o Número de RMA:", value="").strip()
 busqueda = entrada_usuario.upper() 
 
 if busqueda:
@@ -38,7 +38,7 @@ if busqueda:
         
         if results:
             numero_tel = "5493433002458"
-            mensaje_wa = urllib.parse.quote(f"Hola Altavista SA, tengo una consulta sobre el RMA/Cliente: {busqueda}")
+            mensaje_wa = urllib.parse.quote(f"Hola Altavista SA, tengo una consulta sobre el RMA / Cliente: {busqueda}")
             link_wa = f"https://wa.me/{numero_tel}?text={mensaje_wa}"
             
             col_msg, col_ws = st.columns([2, 1])

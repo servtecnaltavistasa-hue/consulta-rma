@@ -8,9 +8,9 @@ st.set_page_config(page_title="RMA ALTAVISTA SA", layout="centered")
 # --- CREDENCIALES SEGURAS (SECRETS) ---
 # Estas líneas buscan los datos en la configuración de Streamlit Cloud
 try:
-    AIRTABLE_TOKEN = st.secrets["patADPYfeYSK86zP9.b6b1da2053f3e17dc5eb4730ddf5015e2d59ca43576e956999b0dded741938c7" ]
-    BASE_ID = st.secrets["appjlLix1HpBwnhpS"]
-    TABLE_NAME = st.secrets["RMA ALTAVISTA"]
+    AIRTABLE_TOKEN = st.secrets["AIRTABLE_TOKEN"]
+    BASE_ID = st.secrets["BASE_ID"]
+    TABLE_NAME = st.secrets["TABLE_NAME"]
 except Exception:
     st.error("Error: No se encontraron las credenciales en los Secrets de Streamlit.")
     st.stop()

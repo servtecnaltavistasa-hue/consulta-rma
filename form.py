@@ -6,7 +6,7 @@ import urllib.parse  # Para procesar el texto de WhatsApp
 # --- 1. CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="Formulario RMA - ALTAVISTA SA", layout="centered")
 
-# --- 2. LIMPIEZA VISUAL  ---
+# --- 2. LIMPIEZA VISUAL ---
 st.markdown("""
     <style>
     /* Ocultar elementos de la interfaz de Streamlit */
@@ -94,16 +94,15 @@ with st.container(border=True):
         texto_encoded = urllib.parse.quote(texto_ws)
         link_whatsapp = f"https://wa.me/5493433002458?text={texto_encoded}"
         
-        # Mostrar botón de WhatsApp
+        # Botón de WhatsApp
         st.markdown(f"""
             <a href="{link_whatsapp}" target="_blank" class="whatsapp-button">
                 📱 (OPCIONAL) INFORMAR POR WHATSAPP
             </a>
             """, unsafe_allow_html=True)
         
-        st.write("") # Espacio
+        st.write("") 
         
-        # Botón para reiniciar el formulario
         if st.button("CARGAR OTRO PRODUCTO", type="secondary", use_container_width=True):
             st.session_state.enviado = False
             st.session_state.datos_resumen = {}
@@ -111,14 +110,12 @@ with st.container(border=True):
             
     else:
         # --- CAMPOS DEL FORMULARIO ---
-        # Fila 1: Cliente y Serial
         f1col1, f1col2 = st.columns(2)
         with f1col1:
             cliente = st.text_input("Nombre / Razón Social", placeholder="Ej: Juan Pérez").upper()
         with f1col2:
             serial = st.text_input("Serial (SN - ASA)", placeholder="Ubicado en la etiqueta")
 
-        # Fila 2: Producto y Fecha
         f2col1, f2col2 = st.columns(2)
         with f2col1:
             producto = st.text_input("Producto", placeholder="Ingrese nombre de producto")
@@ -131,7 +128,6 @@ with st.container(border=True):
             )
             st.caption("Dejar valor predeterminado si no recuerda")
 
-        # Motivo y Descripción
         motivo = st.selectbox("Motivo del trámite", options=["Seleccione una opción", "RMA", "Devolución"])
         descripcion = st.text_area("Descripción detallada", placeholder="Describa el motivo o la falla...")
 
@@ -147,16 +143,14 @@ with st.container(border=True):
 
         st.markdown("---")
         
-        # BOTÓN DE ENVÍO PRINCIPAL
         if st.button("ENVIAR SOLICITUD", type="primary", use_container_width=True):
-            # Validación simple
             contacto_val = tel if opcion_contacto == "WhatsApp" else mail
             if not cliente or not producto or not serial or motivo == "Seleccione una opción" or not contacto_val:
                 st.error("Por favor, complete todos los campos obligatorios antes de enviar.")
             else:
                 with st.spinner("Registrando en base de datos..."):
                     try:
-                        # 1. Guardar resumen para el mensaje de WhatsApp posterior
+                        # 1. Guardar resumen para el mensaje de WhatsApp
                         st.session_state.datos_resumen = {
                             "cliente": cliente,
                             "producto": producto,
@@ -164,7 +158,7 @@ with st.container(border=True):
                             "falla": descripcion
                         }
                         
-                        # 2. Enviar a Airtable
+                        # 2. Enviar a Airtable (Ojo: Asegúrate que la columna en Airtable se llame 'Ingreso' con I mayúscula)
                         nuevo_registro = {
                             "Cliente": cliente,
                             "Producto": producto,
@@ -179,7 +173,6 @@ with st.container(border=True):
                         }
                         table.create(nuevo_registro)
                         
-                        # 3. Cambiar estado y refrescar
                         st.session_state.enviado = True
                         st.rerun()
                         

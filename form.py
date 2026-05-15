@@ -1,7 +1,6 @@
 import streamlit as st
 from pyairtable import Api
 from datetime import date
-import urllib.parse
 
 # --- 1. CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="Formulario RMA - ALTAVISTA SA", layout="centered")
@@ -15,18 +14,11 @@ st.markdown("""
     .stAppDeployButton {display: none;}
     [data-testid="stStatusWidget"] {display: none;}
     
-    /* Estilo del botón de WhatsApp original */
-    .whatsapp-button {
-        background-color: #25D366;
-        color: white !important;
-        padding: 14px 20px;
-        text-align: center;
-        text-decoration: none;
-        display: block;
-        border-radius: 8px;
-        font-weight: bold;
-        margin-top: 15px;
-        border: none;
+    .block-container { padding-top: 2rem; }
+    [data-testid="stVerticalBlockBorderControl"] {
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 0.5rem;
+        padding: 2rem;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -34,8 +26,6 @@ st.markdown("""
 # --- 3. INICIALIZACIÓN DE ESTADO ---
 if 'enviado' not in st.session_state:
     st.session_state.enviado = False
-if 'datos_resumen' not in st.session_state:
-    st.session_state.datos_resumen = {}
 
 # --- 4. CONEXIÓN CON AIRTABLE ---
 try:
@@ -56,34 +46,10 @@ st.markdown("---")
 # --- 6. CUERPO DEL FORMULARIO / PANTALLA DE ÉXITO ---
 with st.container(border=True):
     if st.session_state.enviado:
-        # PANTALLA DE ÉXITO
         st.success("¡Solicitud enviada con éxito! En breve le asignaremos su número de RMA.")
         
-        st.markdown("### ¿Qué desea hacer ahora?")
-        
-        # Lógica de WhatsApp
-        d = st.session_state.datos_resumen
-        texto_ws = (
-            f"Hola ALTAVISTA SA, acabo de enviar una solicitud de RMA / DEVOLUCION:\n\n"
-            f"👤 *Cliente:* {d.get('cliente')}\n"
-            f"📦 *Producto:* {d.get('producto')}\n"
-            f"🔢 *Serial:* {d.get('serial')}\n"
-            f"⚠️ *Falla:* {d.get('falla')}"
-        )
-        texto_encoded = urllib.parse.quote(texto_ws)
-        link_whatsapp = f"https://wa.me/5493433002458?text={texto_encoded}"
-        
-        st.markdown(f"""
-            <a href="{link_whatsapp}" target="_blank" class="whatsapp-button">
-                📱 (OPCIONAL) INFORMAR POR WHATSAPP
-            </a>
-            """, unsafe_allow_html=True)
-        
-        st.write("") 
-        
-        if st.button("CARGAR OTRO PRODUCTO", type="secondary", use_container_width=True):
+        if st.button("REALIZAR NUEVA SOLICITUD", type="primary", use_container_width=True):
             st.session_state.enviado = False
-            st.session_state.datos_resumen = {}
             st.rerun()
             
     else:
@@ -121,13 +87,6 @@ with st.container(border=True):
                 st.error("Por favor, complete todos los campos obligatorios.")
             else:
                 try:
-                    # Guardar para el resumen
-                    st.session_state.datos_resumen = {
-                        "cliente": cliente, "producto": producto,
-                        "serial": serial, "falla": descripcion
-                    }
-                    
-                    # Cargar en Airtable
                     table.create({
                         "Cliente": cliente,
                         "Producto": producto,
@@ -140,7 +99,6 @@ with st.container(border=True):
                         "Estado del RMA": "PENDIENTE",
                         "Ingreso": str(date.today())
                     })
-                    
                     st.session_state.enviado = True
                     st.rerun()
                 except Exception as e:

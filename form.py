@@ -76,38 +76,41 @@ st.markdown("<p style='text-align: center;'>Recuerde que el producto debe contar
 st.markdown("---")
 
 # --- 6. CUERPO DEL FORMULARIO / PANTALLA DE ÉXITO ---
-with st.container(border=True):
-    if st.session_state.enviado:
+if st.session_state.enviado:
         st.success("¡Solicitud enviada con éxito! En breve le asignaremos su número de RMA.")
         
         st.markdown("### ¿Qué desea hacer ahora?")
         
-        # Generar link de WhatsApp con los datos guardados
-        d = st.session_state.datos_resumen
-        texto_ws = (
-            f"Hola ALTAVISTA SA, acabo de enviar una solicitud de RMA / DEVOLUCION:\n\n"
-            f"👤 *Cliente:* {d.get('cliente')}\n"
-            f"📦 *Producto:* {d.get('producto')}\n"
-            f"🔢 *Serial:* {d.get('serial')}\n"
-            f"⚠️ *Falla:* {d.get('falla')}"
-        )
-        texto_encoded = urllib.parse.quote(texto_ws)
-        link_whatsapp = f"https://wa.me/5493433002458?text={texto_encoded}"
-        
-        # Botón de WhatsApp
-        st.markdown(f"""
-            <a href="{link_whatsapp}" target="_blank" class="whatsapp-button">
-                📱 (OPCIONAL) INFORMAR POR WHATSAPP
-            </a>
-            """, unsafe_allow_html=True)
-        
-        st.write("") 
-        
-        if st.button("CARGAR OTRO PRODUCTO", type="secondary", use_container_width=True):
-            st.session_state.enviado = False
-            st.session_state.datos_resumen = {}
-            st.rerun()
+        # --- FILA DE BOTONES (COLUMNAS) ---
+        col_izq, col_der = st.columns([3, 1]) # La columna izquierda es más ancha que la derecha
+
+        with col_izq:
+            if st.button("CARGAR OTRO PRODUCTO", type="secondary", use_container_width=True):
+                st.session_state.enviado = False
+                st.session_state.datos_resumen = {}
+                st.rerun()
+
+        with col_der:
+            # Generar link de WhatsApp
+            d = st.session_state.datos_resumen
+            texto_ws = (
+                f"Hola ALTAVISTA SA, acabo de enviar una solicitud de RMA / DEVOLUCION:\n\n"
+                f"👤 *Cliente:* {d.get('cliente')}\n"
+                f"📦 *Producto:* {d.get('producto')}\n"
+                f"🔢 *Serial:* {d.get('serial')}\n"
+                f"⚠️ *Falla:* {d.get('falla')}"
+            )
+            texto_encoded = urllib.parse.quote(texto_ws)
+            link_whatsapp = f"https://wa.me/5493433002458?text={texto_encoded}"
             
+            # Botón de WhatsApp más pequeño y alineado
+            st.markdown(f"""
+                <a href="{link_whatsapp}" target="_blank" class="whatsapp-button" 
+                   style="margin-top: 0px; padding: 8px; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" width="20" height="20">
+                    Contactarnos
+                </a>
+                """, unsafe_allow_html=True)
     else:
         # --- CAMPOS DEL FORMULARIO ---
         f1col1, f1col2 = st.columns(2)

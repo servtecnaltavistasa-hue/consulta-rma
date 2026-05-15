@@ -1,11 +1,13 @@
 import streamlit as st
 from pyairtable import Api
 from datetime import date
+import urllib.parse
 
 # --- 1. CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="Formulario RMA - ALTAVISTA SA", layout="centered")
 
-# --- 2. ESTILOS VISUALES (LIMPIEZA DE INTERFAZ) ---
+# --- 2. ESTILOS VISUALES Y LIMPIEZA ---
+# He añadido reglas específicas para ocultar "Press Enter to apply" en todos los inputs
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
@@ -14,6 +16,11 @@ st.markdown("""
     .stAppDeployButton {display: none;}
     [data-testid="stStatusWidget"] {display: none;}
     
+    /* ELIMINAR "PRESS ENTER TO APPLY" */
+    div[data-testid="stTextInput"] [data-testid="InputInstructions"] { display: none !important; }
+    div[data-testid="stTextArea"] [data-testid="InputInstructions"] { display: none !important; }
+    div[data-testid="stNumberInput"] [data-testid="InputInstructions"] { display: none !important; }
+
     .block-container { padding-top: 2rem; }
     [data-testid="stVerticalBlockBorderControl"] {
         border: 1px solid rgba(255, 255, 255, 0.1);
@@ -43,11 +50,10 @@ st.markdown("<h1 style='text-align: center;'>Solicitud de RMA / DEVOLUCION</h1>"
 st.markdown("<p style='text-align: center;'>Recuerde que el producto debe contar su embalaje / blíster o caja. NO SE ACEPTARÁN PRODUCTOS SIN CAJA NI NUMERO DE SERIE.</p>", unsafe_allow_html=True)
 st.markdown("---")
 
-# --- 6. CUERPO DEL FORMULARIO / PANTALLA DE ÉXITO ---
+# --- 6. CUERPO DEL FORMULARIO ---
 with st.container(border=True):
     if st.session_state.enviado:
         st.success("¡Solicitud enviada con éxito! En breve le asignaremos su número de RMA.")
-        
         if st.button("REALIZAR NUEVA SOLICITUD", type="primary", use_container_width=True):
             st.session_state.enviado = False
             st.rerun()
@@ -64,7 +70,10 @@ with st.container(border=True):
         with f2col1:
             producto = st.text_input("Producto", placeholder="Ingrese nombre de producto")
         with f2col2:
+            # LEYENDA DINÁMICA DE FECHA
+            hoy = date.today().strftime("%d-%m-%y")
             fecha_compra = st.date_input("Fecha de Compra", max_value=date.today(), format="DD/MM/YYYY")
+            st.caption(f"Dejar {hoy} si no recuerda")
 
         motivo = st.selectbox("Motivo del trámite", options=["Seleccione una opción", "RMA", "Devolución"])
         descripcion = st.text_area("Descripción detallada", placeholder="Describa el motivo o la falla...")
@@ -75,10 +84,8 @@ with st.container(border=True):
 
         tel, mail = "", ""
         if opcion_contacto == "WhatsApp":
-            # Cambio solicitado: Placeholder para WhatsApp
             tel = st.text_input("Número de WhatsApp", placeholder="+5493...")
         else:
-            # Cambio solicitado: Placeholder para Correo
             mail = st.text_input("Dirección de Correo Electrónico", placeholder="correo@email.com")
 
         st.markdown("---")

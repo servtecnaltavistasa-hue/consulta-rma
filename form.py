@@ -175,7 +175,7 @@ with st.container(border=True):
                             "Telefono": tel,      
                             "Email": mail,            
                             "Estado del RMA": "PENDIENTE",
-                            "ingreso": str(date.today())
+                            "Ingreso": str(date.today())
                         }
                         table.create(nuevo_registro)
                         

@@ -6,8 +6,7 @@ import urllib.parse
 # --- 1. CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="Formulario RMA - ALTAVISTA SA", layout="centered")
 
-# --- 2. ESTILOS VISUALES Y LIMPIEZA ---
-# He añadido reglas específicas para ocultar "Press Enter to apply" en todos los inputs
+# --- 2. ESTILOS VISUALES Y BOTÓN WHATSAPP ---
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
@@ -16,10 +15,31 @@ st.markdown("""
     .stAppDeployButton {display: none;}
     [data-testid="stStatusWidget"] {display: none;}
     
-    /* ELIMINAR "PRESS ENTER TO APPLY" */
+    /* Eliminar mensajes "Press Enter to apply" */
     div[data-testid="stTextInput"] [data-testid="InputInstructions"] { display: none !important; }
     div[data-testid="stTextArea"] [data-testid="InputInstructions"] { display: none !important; }
-    div[data-testid="stNumberInput"] [data-testid="InputInstructions"] { display: none !important; }
+
+    /* Estilo para el botón de WhatsApp pequeño */
+    .whatsapp-btn {
+        background-color: #25D366;
+        color: white !important;
+        padding: 8px 16px;
+        text-align: center;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        border-radius: 8px;
+        font-weight: bold;
+        border: none;
+        height: 38px; /* Altura similar a los botones de Streamlit */
+        transition: 0.3s;
+    }
+    .whatsapp-btn:hover {
+        background-color: #128C7E;
+        text-decoration: none;
+    }
 
     .block-container { padding-top: 2rem; }
     [data-testid="stVerticalBlockBorderControl"] {
@@ -33,6 +53,8 @@ st.markdown("""
 # --- 3. INICIALIZACIÓN DE ESTADO ---
 if 'enviado' not in st.session_state:
     st.session_state.enviado = False
+if 'datos_resumen' not in st.session_state:
+    st.session_state.datos_resumen = {}
 
 # --- 4. CONEXIÓN CON AIRTABLE ---
 try:
@@ -54,9 +76,35 @@ st.markdown("---")
 with st.container(border=True):
     if st.session_state.enviado:
         st.success("¡Solicitud enviada con éxito! En breve le asignaremos su número de RMA.")
-        if st.button("REALIZAR NUEVA SOLICITUD", type="primary", use_container_width=True):
-            st.session_state.enviado = False
-            st.rerun()
+        st.markdown("### ¿Qué desea hacer ahora?")
+        
+        # FILA DE BOTONES: Cargar otro (Izquierda) | WhatsApp (Derecha)
+        col_izq, col_der = st.columns([2, 1])
+        
+        with col_izq:
+            # 1. Botón azul para cargar otro producto
+            if st.button("CARGAR OTRO PRODUCTO", type="primary", use_container_width=True):
+                st.session_state.enviado = False
+                st.session_state.datos_resumen = {}
+                st.rerun()
+        
+        with col_der:
+            # 2. Botón de WhatsApp con datos dinámicos
+            d = st.session_state.datos_resumen
+            msg = (f"Hola ALTAVISTA SA, acabo de enviar una solicitud:\n"
+                   f"👤 Cliente: {d.get('cliente')}\n"
+                   f"📦 Producto: {d.get('producto')}\n"
+                   f"🔢 Serial: {d.get('serial')}\n"
+                   f"⚠️ Falla: {d.get('falla')}")
+            
+            link = f"https://wa.me/5493433002458?text={urllib.parse.quote(msg)}"
+            
+            st.markdown(f"""
+                <a href="{link}" target="_blank" class="whatsapp-btn">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" width="18">
+                    Contactarnos
+                </a>
+                """, unsafe_allow_html=True)
             
     else:
         # CAMPOS DEL FORMULARIO
@@ -70,7 +118,6 @@ with st.container(border=True):
         with f2col1:
             producto = st.text_input("Producto", placeholder="Ingrese nombre de producto")
         with f2col2:
-            # LEYENDA DINÁMICA DE FECHA
             hoy = date.today().strftime("%d-%m-%y")
             fecha_compra = st.date_input("Fecha de Compra", max_value=date.today(), format="DD/MM/YYYY")
             st.caption(f"Dejar {hoy} si no recuerda")
@@ -96,6 +143,14 @@ with st.container(border=True):
                 st.error("Por favor, complete todos los campos obligatorios.")
             else:
                 try:
+                    # Guardamos los datos para el mensaje de WhatsApp antes de limpiar
+                    st.session_state.datos_resumen = {
+                        "cliente": cliente,
+                        "producto": producto,
+                        "serial": serial,
+                        "falla": descripcion
+                    }
+                    
                     table.create({
                         "Cliente": cliente,
                         "Producto": producto,

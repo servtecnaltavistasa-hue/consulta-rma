@@ -75,9 +75,11 @@ with st.container(border=True):
 
         tel, mail = "", ""
         if opcion_contacto == "WhatsApp":
-            tel = st.text_input("Número de WhatsApp")
+            # Cambio solicitado: Placeholder para WhatsApp
+            tel = st.text_input("Número de WhatsApp", placeholder="+5493...")
         else:
-            mail = st.text_input("Dirección de Correo Electrónico")
+            # Cambio solicitado: Placeholder para Correo
+            mail = st.text_input("Dirección de Correo Electrónico", placeholder="correo@email.com")
 
         st.markdown("---")
         

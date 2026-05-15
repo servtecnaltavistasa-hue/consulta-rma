@@ -1,49 +1,65 @@
 import streamlit as st
 from pyairtable import Api
 from datetime import date
+import urllib.parse  # Para procesar el texto de WhatsApp
 
-# --- CONFIGURACIÓN DE PÁGINA ---
+# --- 1. CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="Formulario RMA - ALTAVISTA SA", layout="centered")
 
-# --- LIMPIEZA VISUAL TOTAL (BLOQUEO AGRESIVO) ---
+# --- 2. LIMPIEZA VISUAL  ---
 st.markdown("""
     <style>
-    /* 1. Ocultar instrucciones de teclado y avisos de Streamlit */
-    div[data-testid="stTextInput"] [data-testid="InputInstructions"] { display: none !important; }
-    div[data-testid="stTextArea"] [data-testid="InputInstructions"] { display: none !important; }
-    
-    /* 2. Ocultar menús, encabezados y pies de página */
+    /* Ocultar elementos de la interfaz de Streamlit */
     #MainMenu {visibility: hidden !important; display: none !important;}
     footer {visibility: hidden !important; display: none !important;}
     header {visibility: hidden !important; display: none !important;}
     stDecoration {display: none !important;}
-    
-    /* 3. Eliminar botones de Deploy (corona), Perfil y Toolbar de GitHub */
     .stAppDeployButton {display: none !important;}
     [data-testid="stStatusWidget"] {display: none !important;}
     [data-testid="stHeader"] {display: none !important;}
     [data-testid="stToolbar"] {display: none !important;}
-    
-    /* 4. Parche para eliminar el bloque que contiene el perfil de GitHub al pie */
     [data-testid="stAppViewBlockContainer"] + div {display: none !important;}
-    div.stDeployButton {display: none !important;}
-    button[title="View profile"] {display: none !important;}
     
-    /* Ajustes estéticos */
-    .block-container { padding-top: 1rem; }
+    /* Ocultar instrucciones de teclado */
+    div[data-testid="stTextInput"] [data-testid="InputInstructions"] { display: none !important; }
+    div[data-testid="stTextArea"] [data-testid="InputInstructions"] { display: none !important; }
+
+    /* Contenedor del formulario */
+    .block-container { padding-top: 2rem; }
     [data-testid="stVerticalBlockBorderControl"] {
-        border: 1px solid rgba(49, 51, 63, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 0.5rem;
         padding: 2rem;
+    }
+
+    /* Botón de WhatsApp Personalizado */
+    .whatsapp-button {
+        background-color: #25D366;
+        color: white !important;
+        padding: 14px 20px;
+        text-align: center;
+        text-decoration: none;
+        display: block;
+        border-radius: 8px;
+        font-weight: bold;
+        margin-top: 15px;
+        border: none;
+        transition: 0.3s;
+    }
+    .whatsapp-button:hover {
+        background-color: #128C7E;
+        box-shadow: 0px 4px 10px rgba(0,0,0,0.3);
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- INICIALIZACIÓN DE ESTADO ---
+# --- 3. INICIALIZACIÓN DE ESTADO ---
 if 'enviado' not in st.session_state:
     st.session_state.enviado = False
+if 'datos_resumen' not in st.session_state:
+    st.session_state.datos_resumen = {}
 
-# --- CREDENCIALES ---
+# --- 4. CONEXIÓN CON AIRTABLE ---
 try:
     AIRTABLE_TOKEN = st.secrets["AIRTABLE_TOKEN"]
     BASE_ID = st.secrets["BASE_ID"]
@@ -51,81 +67,104 @@ try:
     api = Api(AIRTABLE_TOKEN)
     table = api.table(BASE_ID, TABLE_NAME)
 except Exception:
-    st.error("Error: No se pudieron cargar las credenciales.")
+    st.error("Error crítico: Verifique los Secrets en Streamlit Cloud.")
     st.stop()
 
-# --- CABECERA ---
+# --- 5. CABECERA ---
 st.markdown("<h1 style='text-align: center;'>Solicitud de RMA / DEVOLUCION</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align: center;'>Recuerde que el producto debe contar su embalaje / blíster o caja. NO SE ACEPTARÁN PRODUCTOS SIN CAJA NI NUMERO DE SERIE.</p>", unsafe_allow_html=True)
 st.markdown("---")
 
-# --- CUERPO DEL FORMULARIO ---
+# --- 6. CUERPO DEL FORMULARIO / PANTALLA DE ÉXITO ---
 with st.container(border=True):
     if st.session_state.enviado:
         st.success("¡Solicitud enviada con éxito! En breve le asignaremos su número de RMA.")
-        if st.button("REALIZAR NUEVA SOLICITUD", type="secondary", use_container_width=True):
+        
+        st.markdown("### ¿Qué desea hacer ahora?")
+        
+        # Generar link de WhatsApp con los datos guardados
+        d = st.session_state.datos_resumen
+        texto_ws = (
+            f"Hola ALTAVISTA SA, acabo de enviar una solicitud de RMA / DEVOLUCION:\n\n"
+            f"👤 *Cliente:* {d.get('cliente')}\n"
+            f"📦 *Producto:* {d.get('producto')}\n"
+            f"🔢 *Serial:* {d.get('serial')}\n"
+            f"⚠️ *Falla:* {d.get('falla')}"
+        )
+        texto_encoded = urllib.parse.quote(texto_ws)
+        link_whatsapp = f"https://wa.me/5493433002458?text={texto_encoded}"
+        
+        # Mostrar botón de WhatsApp
+        st.markdown(f"""
+            <a href="{link_whatsapp}" target="_blank" class="whatsapp-button">
+                📱 (OPCIONAL) INFORMAR POR WHATSAPP
+            </a>
+            """, unsafe_allow_html=True)
+        
+        st.write("") # Espacio
+        
+        # Botón para reiniciar el formulario
+        if st.button("CARGAR OTRO PRODUCTO", type="secondary", use_container_width=True):
             st.session_state.enviado = False
+            st.session_state.datos_resumen = {}
             st.rerun()
             
     else:
-        # FILA 1: Cliente y Serial
-        fila1_col1, fila1_col2 = st.columns(2)
-        with fila1_col1:
-            cliente = st.text_input("Nombre / Razón Social", placeholder="Ej: Juan Pérez o Empresa S.A.").upper()
-        with fila1_col2:
+        # --- CAMPOS DEL FORMULARIO ---
+        # Fila 1: Cliente y Serial
+        f1col1, f1col2 = st.columns(2)
+        with f1col1:
+            cliente = st.text_input("Nombre / Razón Social", placeholder="Ej: Juan Pérez").upper()
+        with f1col2:
             serial = st.text_input("Serial (SN - ASA)", placeholder="Ubicado en la etiqueta")
 
-        # FILA 2: Producto y Fecha de Compra
-        fila2_col1, fila2_col2 = st.columns(2)
-        with fila2_col1:
+        # Fila 2: Producto y Fecha
+        f2col1, f2col2 = st.columns(2)
+        with f2col1:
             producto = st.text_input("Producto", placeholder="Ingrese nombre de producto")
-        with fila2_col2:
-            # Agregado parámetro 'help' y corregida la estructura
+        with f2col2:
             fecha_compra = st.date_input(
                 "Fecha de Compra", 
                 max_value=date.today(), 
                 format="DD/MM/YYYY",
-                help="No cambiar si no recuerda la fecha de compra"
+                help="Dejar el valor predeterminado si no recuerda la fecha exacta"
             )
             st.caption("Dejar valor predeterminado si no recuerda")
 
-        # CONTINUACIÓN
-        motivo = st.selectbox(
-            "Motivo del trámite",
-            options=["Seleccione una opción", "RMA", "Devolución"]
-        )
-        
+        # Motivo y Descripción
+        motivo = st.selectbox("Motivo del trámite", options=["Seleccione una opción", "RMA", "Devolución"])
         descripcion = st.text_area("Descripción detallada", placeholder="Describa el motivo o la falla...")
 
         st.markdown("---")
         st.markdown("### Método de Contacto")
-        
-        opcion_contacto = st.radio(
-            "¿Cómo prefiere que nos contactemos?",
-            options=["WhatsApp", "Correo Electrónico"],
-            horizontal=True
-        )
+        opcion_contacto = st.radio("¿Cómo prefiere que nos contactemos?", options=["WhatsApp", "Correo Electrónico"], horizontal=True)
 
-        telefono_val = ""
-        email_val = ""
-
+        tel, mail = "", ""
         if opcion_contacto == "WhatsApp":
-            telefono_val = st.text_input("Número de WhatsApp", placeholder="Ej: 549343...")
+            tel = st.text_input("Número de WhatsApp", placeholder="Ej: 549343...")
         else:
-            email_val = st.text_input("Dirección de Correo Electrónico", placeholder="ejemplo@correo.com")
+            mail = st.text_input("Dirección de Correo Electrónico", placeholder="ejemplo@correo.com")
 
         st.markdown("---")
         
-        enviar = st.button("ENVIAR SOLICITUD", type="primary", use_container_width=True)
-
-        if enviar:
-            contacto_lleno = telefono_val if opcion_contacto == "WhatsApp" else email_val
-            
-            if not cliente or not producto or not serial or motivo == "Seleccione una opción" or not contacto_lleno:
-                st.error("Por favor, complete todos los campos para poder procesar la solicitud.")
+        # BOTÓN DE ENVÍO PRINCIPAL
+        if st.button("ENVIAR SOLICITUD", type="primary", use_container_width=True):
+            # Validación simple
+            contacto_val = tel if opcion_contacto == "WhatsApp" else mail
+            if not cliente or not producto or not serial or motivo == "Seleccione una opción" or not contacto_val:
+                st.error("Por favor, complete todos los campos obligatorios antes de enviar.")
             else:
-                with st.spinner("Procesando..."):
+                with st.spinner("Registrando en base de datos..."):
                     try:
+                        # 1. Guardar resumen para el mensaje de WhatsApp posterior
+                        st.session_state.datos_resumen = {
+                            "cliente": cliente,
+                            "producto": producto,
+                            "serial": serial,
+                            "falla": descripcion
+                        }
+                        
+                        # 2. Enviar a Airtable
                         nuevo_registro = {
                             "Cliente": cliente,
                             "Producto": producto,
@@ -133,13 +172,14 @@ with st.container(border=True):
                             "Compra": str(fecha_compra),
                             "Motivo del trámite": motivo, 
                             "diagnostico": descripcion,
-                            "Telefono": telefono_val,      
-                            "Email": email_val,            
+                            "Telefono": tel,      
+                            "Email": mail,            
                             "Estado del RMA": "PENDIENTE",
-                            "Ingreso": str(date.today())
+                            "ingreso": str(date.today())
                         }
-                        
                         table.create(nuevo_registro)
+                        
+                        # 3. Cambiar estado y refrescar
                         st.session_state.enviado = True
                         st.rerun()
                         

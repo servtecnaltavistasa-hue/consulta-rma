@@ -5,8 +5,18 @@ import urllib.parse
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="RMA ALTAVISTA SA", layout="centered")
 
+# --- CSS PARA ELIMINAR EL CARTEL "PRESS ENTER TO APPLY" ---
+st.markdown("""
+    <style>
+        /* Oculta la leyenda de 'Press Enter to apply' en los inputs de texto */
+        div[data-testid="stTextInput"] aria-instructions, 
+        div[data-testid="stTextInput"] div[data-testid="InputInstructions"] {
+            display: none !important;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
 # --- CREDENCIALES SEGURAS (SECRETS) ---
-# Se restauraron las llamadas originales a st.secrets utilizando las variables del entorno
 try:
     AIRTABLE_TOKEN = st.secrets["AIRTABLE_TOKEN"]
     BASE_ID = st.secrets["BASE_ID"]

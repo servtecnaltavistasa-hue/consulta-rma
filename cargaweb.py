@@ -1,10 +1,12 @@
 import streamlit as st
 from pyairtable import Api
+import urllib.parse
 
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="RMA ALTAVISTA SA", layout="centered")
 
 # --- CREDENCIALES SEGURAS (SECRETS) ---
+# Se restauraron las llamadas originales a st.secrets utilizando las variables del entorno
 try:
     AIRTABLE_TOKEN = st.secrets["AIRTABLE_TOKEN"]
     BASE_ID = st.secrets["BASE_ID"]
@@ -35,31 +37,49 @@ if busqueda:
         results = table.all(formula=formula)
         
         if results:
-            for r in results:
-                f = r.get('fields', {})
-                
-                # EVITAR MUESTRAS VACÍAS
-                if not f.get('Producto'):
-                    continue
-                
-                es_finalizado = f.get('Finalizado', False)
-                estado_valor = str(f.get('Estado del RMA', '')).upper()
+            numero_tel = "5493433002458"
+            mensaje_wa = urllib.parse.quote(f"Hola Altavista SA, tengo una consulta sobre el RMA/Cliente: {busqueda}")
+            link_wa = f"https://wa.me/{numero_tel}?text={mensaje_wa}"
+            
+            col_msg, col_ws = st.columns([2, 1])
+            with col_msg:
+                st.success(f"Se encontraron {len(results)} coincidencia(s):")
+            with col_ws:
+                st.markdown(f"""
+                <a href="{link_wa}" target="_blank" style="text-decoration: none;">
+                    <div style="background-color: #25D366; color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" width="18">
+                        Contactarnos
+                    </div>
+                </a>
+                """, unsafe_allow_html=True)
+
+            for index, record in enumerate(results):
+                f = record['fields']
+                estado_valor = str(f.get('Estado del RMA', '')).strip().upper()
+                diagnostico_texto = f.get('diagnostico', 'Sin diagnóstico registrado.')
+                fecha_compra = f.get('Compra', 'N/A')
                 es_fuera_garantia = "FUERA DE GARANTIA" in estado_valor
-                diagnostico_texto = f.get('diagnostico', 'Sin diagnóstico aún')
                 
-                texto_estado = "[CASO FINALIZADO]" if es_finalizado else "[EN PROCESO]"
+                # 1. IDENTIFICAR SI EL CASO ESTÁ FINALIZADO
+                es_finalizado = f.get('Finalizado') in [True, 1, "True", "true"]
                 
-                label_header = f"Cliente: {f.get('Cliente', 'N/A')} - Producto: {f.get('Producto', 'N/A')} {texto_estado}"
+                # 2. AGREGAR LEYENDA AL ENCABEZADO SEGÚN CORRESPONDA
+                if es_finalizado:
+                    titulo_ficha = f"Cliente: {f.get('Cliente', 'S/D')} - RMA: {f.get('Numero RMA', 'S/D')} | [CASO FINALIZADO]"
+                else:
+                    titulo_ficha = f"Cliente: {f.get('Cliente', 'S/D')} - RMA: {f.get('Numero RMA', 'S/D')} | [EN PROCESO]"
                 
-                with st.expander(label_header, expanded=False):
+                debe_expandir = True
+                if len(results) > 2 and index > 0:
+                    debe_expandir = False
+                
+                with st.expander(titulo_ficha, expanded=debe_expandir):
                     col1, col2 = st.columns(2)
-                    
                     with col1:
                         st.markdown(f"**Producto:** {f.get('Producto', 'N/A')}")
-                        st.markdown(f"**Serial:** {f.get('Serial', 'N/A')}")
-                        
-                        fecha_compra = f.get('Compra', 'N/A')
-                        if fecha_compra != 'N/A' and "EXCEDIDO" in str(f.get('Compra', '')):
+                        st.markdown(f"**Serial:** {f.get('serial', 'N/A')}")
+                        if es_fuera_garantia:
                             st.markdown(f"**Compra:** :red[{fecha_compra}]")
                         else:
                             st.markdown(f"**Compra:** {fecha_compra}")
@@ -70,30 +90,16 @@ if busqueda:
                         st.markdown(f"**Aceptado:** {aceptado_icon}")
                         st.markdown(f"**Estado del RMA:** {f.get('Estado del RMA', 'N/A')}")
                         
-                        # FECHA DE RESOLUCIÓN
+                        # 3. FECHA DE RESOLUCIÓN REMARCADA EN ROJO SI ESTÁ FINALIZADO
                         if es_finalizado:
                             st.markdown(f"**Resolución:** :red[{f.get('Resolucion', 'N/A')}]")
                         else:
                             st.markdown(f"**Resolución:** {f.get('Resolucion', 'N/A')}")
                         
-                        # =====================================================================
-                        # SOLUCIÓN EXPLICITA PARA TEXTO LARGO (LONG TEXT) DE AIRTABLE
-                        # =====================================================================
-                        # Forzamos la obtención del string, si no existe devuelve cadena vacía
-                        comentario_raw = f.get('comentario', '')
-                        
-                        # Limpieza estricta de formatos nulos que genera Airtable en textos largos vacíos
-                        comentario_limpio = "" if str(comentario_raw).strip() in ["None", "none", "nan", "NaN", ""] else str(comentario_raw).strip()
-                        
-                        if comentario_limpio:
-                            # Lo renderizamos como HTML destacado para que no se pierda visualmente
-                            st.markdown(f"""
-                                <div style="margin-top: 8px; padding: 6px 10px; background-color: #f9f9f9; 
-                                            border-left: 3px solid #17a2b8; border-radius: 4px;">
-                                    <strong>Comentario:</strong> <span style="font-style: italic; color: #555;">{comentario_limpio}</span>
-                                </div>
-                            """, unsafe_allow_html=True)
-                        # =====================================================================
+                        # AGREGAR EL DATO COMENTARIO SI TIENE CONTENIDO EN AIRTABLE
+                        comentario_texto = f.get('comentario', '')
+                        if comentario_texto and str(comentario_texto).strip() not in ["None", "none", "nan", "NaN", ""]:
+                            st.markdown(f"**Comentario:** {comentario_texto}")
                     
                     st.markdown("---")
                     st.markdown(f"**Diagnóstico:**")
@@ -109,4 +115,4 @@ if busqueda:
     except Exception as e:
         st.error(f"Error en la consulta: {e}")
 else:
-    st.info("Sistema de consulta de RMA. Ingrese sus datos para comenzar...")
+    st.info("Sistema de consulta de RMA. Ingrese sus datos para comenzar.")

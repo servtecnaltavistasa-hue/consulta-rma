@@ -279,12 +279,10 @@ with st.expander("📥 1. TICKETS POR ACEPTAR (Entrada)", expanded=True):
             
         df1['Compra'] = df1['Compra'].apply(formatear_para_leer)
         with st.form("f1"):
-            # Lógica de ocultamiento de columnas para la Tabla 1 basado en el Rol
             if st.session_state.rol == "admin":
                 c1_cols = ['Cliente', 'Producto', 'Serial', 'Falla', 'Compra', 'Aceptado']
                 esta_deshabilitado_t1 = ['Serial', 'Falla']
             else:
-                # Ocultamos 'Aceptado' y 'Compra' para usuarios comunes
                 c1_cols = ['Cliente', 'Producto', 'Serial', 'Falla']
                 esta_deshabilitado_t1 = ['Cliente', 'Producto', 'Serial', 'Falla']
             
@@ -310,12 +308,12 @@ with st.expander("⚙️ 2. TICKETS EN PROCESO (Aceptados)", expanded=True):
             df2[c] = df2[c].apply(formatear_para_leer)
         
         with st.form("f2"):
-            # Lógica de ocultamiento de columnas para la Tabla 2 basado en el Rol
+            # Lógica de visualización de columnas modificada para el Admin
             if st.session_state.rol == "admin":
-                c2_cols = ['comentario', 'Cliente', 'Producto', 'Compra', 'Falla', 'Ingreso', 'diagnostico', 'Estado del RMA', 'Resolucion', 'Finalizado']
-                deshabilitados_t2 = ['Cliente', 'Producto', 'Compra', 'Falla']
+                # Se removieron 'Compra' y 'Resolucion' de la vista del Admin
+                c2_cols = ['comentario', 'Cliente', 'Producto', 'Falla', 'Ingreso', 'diagnostico', 'Estado del RMA', 'Finalizado']
+                deshabilitados_t2 = ['Cliente', 'Producto', 'Falla']
             else:
-                # Ocultamos 'Finalizado', 'Compra' y 'Falla' (quedan 7 columnas en total en esta vista)
                 c2_cols = ['comentario', 'Cliente', 'Producto', 'Ingreso', 'diagnostico', 'Estado del RMA', 'Resolucion']
                 deshabilitados_t2 = ['Cliente', 'Producto', 'Ingreso', 'diagnostico', 'Estado del RMA', 'Resolucion']
             
@@ -341,11 +339,16 @@ with st.expander("⚙️ 2. TICKETS EN PROCESO (Aceptados)", expanded=True):
                     campos_a_revisar = ['comentario', 'diagnostico', 'Estado del RMA', 'Finalizado'] if st.session_state.rol == "admin" else ['comentario']
                     up = {k: r[k] for k in campos_a_revisar if k in r and str(r[k]) != str(orig.get(k, ""))}
                     
-                    if st.session_state.rol == "admin":
-                        for f in ['Ingreso', 'Resolucion']:
-                            if f in r:
-                                val, stt = formatear_y_validar_fecha(r[f])
-                                if stt == "OK": up[f] = val
+                    # --- AUTOMATIZACIÓN DE LA FECHA DE RESOLUCIÓN ---
+                    # Si el admin marcó como Finalizado (y antes estaba en False)
+                    if st.session_state.rol == "admin" and 'Finalizado' in up and up['Finalizado'] == True:
+                        if not orig.get('Finalizado', False):
+                            # Se completa automáticamente con la fecha de hoy en formato Airtable
+                            up['Resolucion'] = date.today().strftime('%Y-%m-%d')
+                    
+                    if st.session_state.rol == "admin" and 'Ingreso' in r:
+                        val, stt = formatear_y_validar_fecha(r['Ingreso'])
+                        if stt == "OK": up['Ingreso'] = val
                     
                     if up: table.update(r['id_interno'], up)
                 st.cache_data.clear(); st.rerun()

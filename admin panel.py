@@ -189,7 +189,7 @@ def cargar_todos_los_datos():
 # --- 3. CARGA Y MENÚ ---
 df_all = cargar_todos_los_datos()
 
-# --- MENÚ SUPERIOR DE ACCESOS DIRECTOS (ANTI-BLOQUEO POPUPS) ---
+# --- MENÚ SUPERIOR DE ACCESOS DIRECTOS ---
 if st.session_state.rol == "admin":
     c1, c2, c3, c4, c5 = st.columns(5)
     with c1: st.link_button("🔵 Airtable", "https://airtable.com/appjlLix1HpBwnhpS/tblNnoXdIsLFN92Mr/viwLRiCozAc4oVKZY", use_container_width=True)
@@ -197,8 +197,6 @@ if st.session_state.rol == "admin":
     with c3: st.link_button("📝 Texto Clientes", "https://docs.google.com/document/d/1URgFPuVsIoR6LX2diAwFR5rWRKYvmmEwvQ7VXuxSnYg", use_container_width=True)
     
     with c4:
-        # Menú HTML nativo que simula una lista desplegable al pasar el mouse/hacer click 
-        # y cuyos links usan target="_blank" real, burlando el bloqueo de popups del navegador.
         st.markdown("""
             <div class="menu-dropdown">
                 <button class="menu-boton">🚀 Páginas... ▾</button>
@@ -213,7 +211,7 @@ if st.session_state.rol == "admin":
     with c5: st.link_button("📊 Excel Viejo", "https://docs.google.com/spreadsheets/d/17zp1kEZhVBw1Ul3HkoDZhyQ2IYthjNGS", use_container_width=True)
 
 
-# --- HERRAMIENTA DE REPORTE (DISPONIBLE PARA TODOS LOS ROLES) ---
+# --- HERRAMIENTA DE REPORTE ---
 col_rep1, col_rep2 = st.columns([1, 4])
 with col_rep1:
     btn_reporte = st.button("📊 Reporte", use_container_width=True)
@@ -233,7 +231,7 @@ if st.session_state.get('mostrar_input_reporte', False):
                 
                 df_exc = df_rep[cols_sel].copy()
                 
-                # Ordenar por fecha de resolución desc
+                # Ordenar por fecha desc
                 df_exc['Resolucion_clean'] = df_exc['Resolucion'].astype(str).str.strip().replace(["None", "none", "nan", "NaN"], "")
                 df_exc['Resolucion_dt'] = pd.to_datetime(df_exc['Resolucion_clean'], errors='coerce')
                 df_exc = df_exc.sort_values(by='Resolucion_dt', ascending=False).drop(columns=['Resolucion_dt', 'Resolucion_clean'])
@@ -241,7 +239,7 @@ if st.session_state.get('mostrar_input_reporte', False):
                 for f in ['Compra', 'Ingreso', 'Resolucion']:
                     df_exc[f] = df_exc[f].apply(formatear_para_leer)
 
-                # Exportación limpia compatible con Python 3.14 y Pandas modernos
+                # Exportación ultra-limpia corregida para evitar TypeErrors y problemas de compatibilidad
                 output = io.BytesIO()
                 with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
                     df_exc.to_excel(writer, index=False, sheet_name='Reporte', startrow=2)
@@ -250,25 +248,14 @@ if st.session_state.get('mostrar_input_reporte', False):
                     worksheet = writer.sheets['Reporte']
                     
                     formato_titulo = workbook.add_format({'bold': True, 'font_size': 14, 'font_name': 'Segoe UI'})
-                    
                     formato_encabezado = workbook.add_format({
-                        'bold': True,
-                        'font_color': '#FFFFFF',
-                        'bg_color': '#000000',
-                        'border': 1,
-                        'border_color': '#000000',
-                        'align': 'center',
-                        'valign': 'vcenter',
-                        'font_name': 'Segoe UI',
-                        'font_size': 11
+                        'bold': True, 'font_color': '#FFFFFF', 'bg_color': '#000000',
+                        'border': 1, 'border_color': '#000000', 'align': 'center', 'valign': 'vcenter',
+                        'font_name': 'Segoe UI', 'font_size': 11
                     })
-                    
                     formato_celda = workbook.add_format({
-                        'border': 1,
-                        'border_color': '#000000',
-                        'valign': 'vcenter',
-                        'font_name': 'Segoe UI',
-                        'font_size': 10
+                        'border': 1, 'border_color': '#000000', 'valign': 'vcenter',
+                        'font_name': 'Segoe UI', 'font_size': 10
                     })
                     
                     worksheet.write(0, 0, f"REPORTE DE RMA - CLIENTE: {cliente_buscado.upper()}", formato_titulo)
@@ -276,20 +263,19 @@ if st.session_state.get('mostrar_input_reporte', False):
                     for col_num, header_title in enumerate(df_exc.columns):
                         worksheet.write(1, col_num, header_title, formato_encabezado)
                     
-                    # Solución robusta para el autoajuste de celdas en Python 3.14
+                    # Saneamiento manual iterativo de filas para evitar fallos de mapa de longitud
                     for i, col in enumerate(df_exc.columns):
-                        lista_valores = df_exc[col].astype(str).tolist()
-                        max_len = max([len(str(val)) for val in lista_valores]) if lista_valores else 0
-                        max_len = max(max_len, len(col)) + 4
-                        worksheet.set_column(i, i, max_len)
-                        
+                        max_len = len(col)
                         for row_idx in range(len(df_exc)):
                             val_raw = df_exc.iloc[row_idx, i]
-                            if pd.isna(val_raw) or str(val_raw).strip() in ["NaT", "None", "nan", "NaN"]:
-                                val_celda = ""
-                            else:
-                                val_celda = str(val_raw)
+                            val_celda = "" if pd.isna(val_raw) or str(val_raw).strip() in ["NaT", "None", "nan", "NaN"] else str(val_raw)
+                            
+                            if len(val_celda) > max_len:
+                                max_len = len(val_celda)
+                                
                             worksheet.write(row_idx + 2, i, val_celda, formato_celda)
+                        
+                        worksheet.set_column(i, i, max_len + 4)
                             
                     worksheet.set_row(1, 24)
                 
@@ -324,40 +310,4 @@ for col_txt in ['comentario', 'Falla', 'diagnostico', 'Ingreso', 'Resolucion', '
 # --- TABLA 1: POR ACEPTAR ---
 df1 = df_all[
     (df_all['Aceptado'] == False) & 
-    (df_all['Producto'].str.strip() != "") & 
-    (df_all['Cliente'].str.strip() != "")
-].copy()
-
-with st.expander("📥 1. TICKETS POR ACEPTAR (Entrada)", expanded=True):
-    if not df1.empty:
-        if 'Compra' in df1.columns:
-            df1 = df1.sort_values(by='Compra', ascending=False)
-            
-        df1['Compra'] = df1['Compra'].apply(formatear_para_leer)
-        with st.form("f1"):
-            if st.session_state.rol == "admin":
-                c1_cols = ['Cliente', 'Producto', 'Serial', 'Falla', 'Compra', 'Aceptado']
-                esta_deshabilitado_t1 = ['Serial', 'Falla']
-            else:
-                c1_cols = ['Cliente', 'Producto', 'Serial', 'Falla']
-                esta_deshabilitado_t1 = ['Cliente', 'Producto', 'Serial', 'Falla']
-            
-            ed1 = st.data_editor(df1[['id_interno'] + c1_cols].reset_index(drop=True), column_config={"id_interno":None}, disabled=esta_deshabilitado_t1, hide_index=True, use_container_width=True)
-            
-            if st.form_submit_button("GUARDAR ENTRADAS", disabled=(st.session_state.rol != "admin")):
-                for _, r in ed1.iterrows():
-                    orig = df1[df1['id_interno'] == r['id_interno']].iloc[0]
-                    up = {k: r[k] for k in ['Aceptado','Cliente','Producto'] if k in r and str(r[k]) != str(orig.get(k,""))}
-                    if 'Compra' in r:
-                        f, e = formatear_y_validar_fecha(r['Compra'])
-                        if e == "OK" and f: up['Compra'] = f
-                    if up: table.update(r['id_interno'], up)
-                st.cache_data.clear(); st.rerun()
-    else:
-        st.info("No hay pendientes.")
-
-# --- TABLA 2: EN PROCESO ---
-df2 = df_all[(df_all['Aceptado'] == True) & (df_all['Finalizado'] == False)].copy().reset_index(drop=True)
-with st.expander("⚙️ 2. TICKETS EN PROCESO (Aceptados)", expanded=True):
-    if not df2.empty:
-        for c in ['Compra','Ingreso','Resolucion']:
+    (df_all

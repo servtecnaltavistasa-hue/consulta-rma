@@ -239,7 +239,7 @@ if st.session_state.get('mostrar_input_reporte', False):
                 for f in ['Compra', 'Ingreso', 'Resolucion']:
                     df_exc[f] = df_exc[f].apply(formatear_para_leer)
 
-                # Exportación ultra-limpia corregida para evitar TypeErrors y problemas de compatibilidad
+                # Exportación limpia corregida sin el parámetro obsoleto style_converter
                 output = io.BytesIO()
                 with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
                     df_exc.to_excel(writer, index=False, sheet_name='Reporte', startrow=2)
@@ -260,54 +260,4 @@ if st.session_state.get('mostrar_input_reporte', False):
                     
                     worksheet.write(0, 0, f"REPORTE DE RMA - CLIENTE: {cliente_buscado.upper()}", formato_titulo)
                     
-                    for col_num, header_title in enumerate(df_exc.columns):
-                        worksheet.write(1, col_num, header_title, formato_encabezado)
-                    
-                    # Saneamiento manual iterativo de filas para evitar fallos de mapa de longitud
-                    for i, col in enumerate(df_exc.columns):
-                        max_len = len(col)
-                        for row_idx in range(len(df_exc)):
-                            val_raw = df_exc.iloc[row_idx, i]
-                            val_celda = "" if pd.isna(val_raw) or str(val_raw).strip() in ["NaT", "None", "nan", "NaN"] else str(val_raw)
-                            
-                            if len(val_celda) > max_len:
-                                max_len = len(val_celda)
-                                
-                            worksheet.write(row_idx + 2, i, val_celda, formato_celda)
-                        
-                        worksheet.set_column(i, i, max_len + 4)
-                            
-                    worksheet.set_row(1, 24)
-                
-                st.download_button(
-                    label=f"📥 Descargar Reporte {cliente_buscado}", 
-                    data=output.getvalue(), 
-                    file_name=f"Reporte_{cliente_buscado}_{datetime.now().strftime('%d_%m_%Y')}.xlsx", 
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                )
-            else:
-                st.warning("No hay datos para ese cliente.")
-st.divider()
-
-if df_all.empty:
-    st.warning("No hay datos para mostrar.")
-    st.stop()
-
-# --- SANEAMIENTO SEGURO DE COLUMNAS ---
-columnas_requeridas = ['Aceptado', 'Finalizado', 'Ingreso', 'Resolucion', 'diagnostico', 'Estado del RMA', 'Compra', 'Producto', 'comentario', 'Falla', 'Serial', 'Numero RMA']
-for col in columnas_requeridas:
-    if col not in df_all.columns: 
-        df_all[col] = False if col in ['Aceptado', 'Finalizado'] else ""
-    else:
-        if col in ['Aceptado', 'Finalizado']:
-            df_all[col] = df_all[col].apply(lambda x: True if x in [True, 1, "True", "true"] else False)
-
-for col_txt in ['comentario', 'Falla', 'diagnostico', 'Ingreso', 'Resolucion', 'Compra', 'Cliente', 'Producto', 'Serial', 'Numero RMA']:
-    if col_txt in df_all.columns:
-        df_all[col_txt] = df_all[col_txt].fillna("").apply(lambda x: str(int(x)) if isinstance(x, float) and x.is_integer() else str(x))
-        df_all[col_txt] = df_all[col_txt].apply(lambda x: "" if str(x).strip() in ["None", "none", "nan", "NaN", ""] else str(x).strip())
-
-# --- TABLA 1: POR ACEPTAR ---
-df1 = df_all[
-    (df_all['Aceptado'] == False) & 
-    (df_all
+                    for col_num, header_title in enumerate(df_exc.columns

@@ -6,7 +6,7 @@ import urllib.parse
 # --- 1. CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="Formulario RMA - ALTAVISTA SA", layout="centered")
 
-# --- 2. ESTILOS VISUALES (LIMPIEZA DE INTERFAZ) ---
+# --- 2. ESTILOS VISUALES (LIMPIEZA DE INTERFAZ Y OCULTAR AYUDAS) ---
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
@@ -15,7 +15,13 @@ st.markdown("""
     .stAppDeployButton {display: none;}
     [data-testid="stStatusWidget"] {display: none;}
     
-    /* Estilo personalizado para el botón de WhatsApp con el logo */
+    /* TRUCO EFECTIVO: Oculta por completo el texto "Press Enter to submit" de Streamlit */
+    [data-testid="stTextInput"] aria-label, 
+    [data-testid="stInputInstructions"] {
+        display: none !important;
+    }
+    
+    /* Estilo personalizado para el botón de WhatsApp con el logo oficial */
     .whatsapp-button {
         background-color: #25D366;
         color: white !important;
@@ -80,7 +86,7 @@ with st.container(border=True):
         texto_encoded = urllib.parse.quote(texto_ws)
         link_whatsapp = f"https://wa.me/5493433002458?text={texto_encoded}"
         
-        # Botón modificado con "Contactanos" y un SVG del logo de WhatsApp al lado
+        # Mensaje interactivo con botón "Contactanos" y logo en SVG
         st.markdown(f"""
             <a href="{link_whatsapp}" target="_blank" class="whatsapp-button">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
@@ -98,52 +104,53 @@ with st.container(border=True):
             st.rerun()
             
     else:
-        # CREAMOS UN FORMULARIO REAL: Esto elimina el molesto "Press enter to submit" de Streamlit
-        with st.form("formulario_rma_alta", clear_on_submit=False):
-            f1col1, f1col2 = st.columns(2)
-            with f1col1:
-                cliente = st.text_input("Nombre / Razón Social", placeholder="Ej: Juan Pérez").upper()
-            with f1col2:
-                serial = st.text_input("Serial (SN - ASA)", placeholder="Ubicado en la etiqueta")
+        # CAMPOS NORMALES DE ENTRADA DIRECTA
+        f1col1, f1col2 = st.columns(2)
+        with f1col1:
+            cliente = st.text_input("Nombre / Razón Social", placeholder="Ej: Juan Pérez").upper()
+        with f1col2:
+            serial = st.text_input("Serial (SN - ASA)", placeholder="Ubicado en la etiqueta")
 
-            f2col1, f2col2 = st.columns(2)
-            with f2col1:
-                producto = st.text_input("Producto", placeholder="Ingrese nombre de producto")
-            with f2col2:
-                fecha_compra = st.date_input("Fecha de Compra", max_value=date.today(), format="DD/MM/YYYY")
+        f2col1, f2col2 = st.columns(2)
+        with f2col1:
+            producto = st.text_input("Producto", placeholder="Ingrese nombre de producto")
+        with f2col2:
+            fecha_compra = st.date_input("Fecha de Compra", max_value=date.today(), format="DD/MM/YYYY")
 
-            motivo = st.selectbox("Motivo del trámite", options=["Seleccione una opción", "RMA", "Devolución"])
-            descripcion = st.text_area("Descripción detallada", placeholder="Describa el motivo o la falla...")
+        motivo = st.selectbox("Motivo del trámite", options=["Seleccione una opción", "RMA", "Devolución"])
+        descripcion = st.text_area("Descripción detallada", placeholder="Describa el motivo o la falla...")
 
-            st.markdown("---")
-            st.markdown("### Método de Contacto")
-            opcion_contacto = st.radio("¿Cómo prefiere que nos contactemos?", options=["WhatsApp", "Correo Electrónico"], horizontal=True)
+        st.markdown("---")
+        st.markdown("### Método de Contacto")
+        opcion_contacto = st.radio("¿Cómo prefiere que nos contactemos?", options=["WhatsApp", "Correo Electrónico"], horizontal=True)
 
-            # MÁSCARAS Y EJEMPLOS CORREGIDOS (Aparecen de forma dinámica según la selección)
-            tel, mail = "", ""
-            if opcion_contacto == "WhatsApp":
-                tel = st.text_input("Número de WhatsApp", placeholder="Ej: +5493433002458")
-            else:
-                mail = st.text_input("Dirección de Correo Electrónico", placeholder="Ej: correo@prueba.com")
+        tel, mail = "", ""
+        if opcion_contacto == "WhatsApp":
+            tel = st.text_input("Número de WhatsApp", placeholder="Ej: +5493433002458")
+        else:
+            mail = st.text_input("Dirección de Correo Electrónico", placeholder="Ej: correo@prueba.com")
 
-            st.markdown("---")
-            
-            # El botón de enviar ahora actúa como el submit del st.form
-            enviar_click = st.form_submit_button("ENVIAR SOLICITUD", type="primary", use_container_width=True)
-            
-        if enviar_click:
-            contacto_val = tel if opcion_contacto == "WhatsApp" else mail
-            if not cliente or not producto or not serial or motivo == "Seleccione una opción" or not contacto_val:
+        st.markdown("---")
+        
+        if st.button("ENVIAR SOLICITUD", type="primary", use_container_width=True):
+            # EVALUACIÓN CONDICIONAL ESTRICTA DE LOS CAMPOS OBLIGATORIOS
+            contacto_ok = False
+            if opcion_contacto == "WhatsApp" and tel.strip() != "":
+                contacto_ok = True
+            elif opcion_contacto == "Correo Electrónico" and mail.strip() != "":
+                contacto_ok = True
+                
+            if not cliente or not producto or not serial or motivo == "Seleccione una opción" or not contacto_ok:
                 st.error("Por favor, complete todos los campos obligatorios.")
             else:
                 try:
-                    # Guardar para el resumen
+                    # Guardar variables en sesión para el mensaje del link
                     st.session_state.datos_resumen = {
                         "cliente": cliente, "producto": producto,
                         "serial": serial, "falla": descripcion
                     }
                     
-                    # Mapeo correcto de las columnas en Airtable
+                    # Escritura limpia en las columnas de Airtable
                     table.create({
                         "Cliente": cliente,
                         "Producto": producto,
@@ -154,11 +161,4 @@ with st.container(border=True):
                         "diagnostico": "",             
                         "Telefono": tel,      
                         "Email": mail,            
-                        "Estado del RMA": "PENDIENTE",
-                        "Ingreso": str(date.today())
-                    })
-                    
-                    st.session_state.enviado = True
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Error al enviar: {e}")
+                        "Estado del RMA

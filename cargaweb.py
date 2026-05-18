@@ -4,10 +4,12 @@ import urllib.parse
 
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="RMA ALTAVISTA SA", layout="centered")
+
+# --- CREDENCIALES SEGURAS (SECRETS) ---
 try:
-    AIRTABLE_TOKEN = st.secrets["AIRTABLE_TOKEN"]
-    BASE_ID = st.secrets["BASE_ID"]
-    TABLE_NAME = st.secrets["TABLE_NAME"]
+    AIRTABLE_TOKEN = st.secrets["patADPYfeYSK86zP9.b6b1da2053f3e17dc5eb4730ddf5015e2d59ca43576e956999b0dded741938c7" ]
+    BASE_ID = st.secrets["appjlLix1HpBwnhpS"]
+    TABLE_NAME = st.secrets["RMA ALTAVISTA"]
 except Exception:
     st.error("Error: No se encontraron las credenciales en los Secrets de Streamlit.")
     st.stop()
@@ -19,7 +21,7 @@ table = api.table(BASE_ID, TABLE_NAME)
 st.markdown("<h1 style='text-align: center;'>RMA ALTAVISTA SA</h1>", unsafe_allow_html=True)
 
 # --- BARRA DE BÚSQUEDA ---
-entrada_usuario = st.text_input("Ingrese su Código de Cliente o Número de RMA:", value="").strip()
+entrada_usuario = st.text_input("Ingrese Código de Cliente o Número de RMA:", value="").strip()
 busqueda = entrada_usuario.upper() 
 
 if busqueda:
@@ -35,7 +37,7 @@ if busqueda:
         
         if results:
             numero_tel = "5493433002458"
-            mensaje_wa = urllib.parse.quote(f"Hola Altavista SA, tengo una consulta sobre el RMA / Cliente: {busqueda}")
+            mensaje_wa = urllib.parse.quote(f"Hola Altavista SA, tengo una consulta sobre el RMA/Cliente: {busqueda}")
             link_wa = f"https://wa.me/{numero_tel}?text={mensaje_wa}"
             
             col_msg, col_ws = st.columns([2, 1])
@@ -58,12 +60,23 @@ if busqueda:
                 fecha_compra = f.get('Compra', 'N/A')
                 es_fuera_garantia = "FUERA DE GARANTIA" in estado_valor
                 
-                titulo_ficha = f"Cliente: {f.get('Cliente', 'S/D')} - RMA: {f.get('Numero RMA', 'S/D')}"
+                # VALIDACIÓN EXTRA: Comprobar si está marcado como Finalizado en Airtable
+                es_finalizado = f.get('Finalizado') in [True, 1, "True", "true"]
+                
+                # Título base del encabezado
+                titulo_texto = f"Cliente: {f.get('Cliente', 'S/D')} - RMA: {f.get('Numero RMA', 'S/D')}"
+                
+                # Si está finalizado, agregamos el texto FINALIZADO flotando a la derecha
+                if es_finalizado:
+                    titulo_ficha = f"{titulo_texto} &nbsp;&nbsp;&nbsp;&nbsp; <span style='color: #dc3545; font-weight: bold; float: right; padding-right: 15px;'>🔴 FINALIZADO</span>"
+                else:
+                    titulo_ficha = titulo_texto
                 
                 debe_expandir = True
                 if len(results) > 2 and index > 0:
                     debe_expandir = False
                 
+                # Renderizamos la tarjeta usando el título modificado con soporte HTML (Streamlit lo permite en los expanders)
                 with st.expander(titulo_ficha, expanded=debe_expandir):
                     col1, col2 = st.columns(2)
                     with col1:
@@ -79,7 +92,20 @@ if busqueda:
                         aceptado_icon = "✅" if f.get('Aceptado') else "❌"
                         st.markdown(f"**Aceptado:** {aceptado_icon}")
                         st.markdown(f"**Estado del RMA:** {f.get('Estado del RMA', 'N/A')}")
-                        st.markdown(f"**Resolución:** {f.get('Resolucion', 'N/A')}")
+                        
+                        # MODIFICACIÓN: Si está finalizado, se remarca la fecha de resolución en un bloque rojo
+                        if es_finalizado:
+                            st.markdown(
+                                f"""
+                                <div style="background-color: #f8d7da; border: 1px solid #f5c6cb; border-left: 5px solid #dc3545; padding: 6px 12px; border-radius: 4px; margin-top: 5px; display: inline-block;">
+                                    <strong style="color: #721c24;">Resolución:</strong> 
+                                    <span style="color: #dc3545; font-weight: bold;">{f.get('Resolucion', 'N/A')}</span>
+                                </div>
+                                """, 
+                                unsafe_allow_html=True
+                            )
+                        else:
+                            st.markdown(f"**Resolución:** {f.get('Resolucion', 'N/A')}")
                     
                     st.markdown("---")
                     st.markdown(f"**Diagnóstico:**")

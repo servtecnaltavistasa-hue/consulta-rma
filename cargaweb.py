@@ -6,10 +6,11 @@ import urllib.parse
 st.set_page_config(page_title="RMA ALTAVISTA SA", layout="centered")
 
 # --- CREDENCIALES SEGURAS (SECRETS) ---
+# Se restauraron las llamadas originales a st.secrets utilizando las variables del entorno
 try:
-    AIRTABLE_TOKEN = st.secrets["patADPYfeYSK86zP9.b6b1da2053f3e17dc5eb4730ddf5015e2d59ca43576e956999b0dded741938c7" ]
-    BASE_ID = st.secrets["appjlLix1HpBwnhpS"]
-    TABLE_NAME = st.secrets["RMA ALTAVISTA"]
+    AIRTABLE_TOKEN = st.secrets["AIRTABLE_TOKEN"]
+    BASE_ID = st.secrets["BASE_ID"]
+    TABLE_NAME = f"{st.secrets['TABLE_NAME']}"
 except Exception:
     st.error("Error: No se encontraron las credenciales en los Secrets de Streamlit.")
     st.stop()
@@ -60,10 +61,10 @@ if busqueda:
                 fecha_compra = f.get('Compra', 'N/A')
                 es_fuera_garantia = "FUERA DE GARANTIA" in estado_valor
                 
-                # 1. IDENTIFICAR SI EL CASO ESTÁ FINALIZADO (Checkbox de Airtable)
+                # 1. IDENTIFICAR SI EL CASO ESTÁ FINALIZADO
                 es_finalizado = f.get('Finalizado') in [True, 1, "True", "true"]
                 
-                # 2. DEFINIR EL TEXTO PLANO DEL ENCABEZADO CON EL ESTADO REQUERIDO
+                # 2. AGREGAR LEYENDA AL ENCABEZADO SEGÚN CORRESPONDA
                 if es_finalizado:
                     titulo_ficha = f"Cliente: {f.get('Cliente', 'S/D')} - RMA: {f.get('Numero RMA', 'S/D')} | [CASO FINALIZADO]"
                 else:
@@ -73,7 +74,6 @@ if busqueda:
                 if len(results) > 2 and index > 0:
                     debe_expandir = False
                 
-                # Creamos el expander con la etiqueta de estado integrada directamente
                 with st.expander(titulo_ficha, expanded=debe_expandir):
                     col1, col2 = st.columns(2)
                     with col1:
@@ -90,7 +90,7 @@ if busqueda:
                         st.markdown(f"**Aceptado:** {aceptado_icon}")
                         st.markdown(f"**Estado del RMA:** {f.get('Estado del RMA', 'N/A')}")
                         
-                        # 3. COMPONENTE DE LA FECHA DE RESOLUCIÓN REMARCADA EN ROJO
+                        # 3. FECHA DE RESOLUCIÓN REMARCADA EN ROJO SI ESTÁ FINALIZADO
                         if es_finalizado:
                             st.markdown(f"**Resolución:** :red[{f.get('Resolucion', 'N/A')}]")
                         else:

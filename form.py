@@ -15,18 +15,25 @@ st.markdown("""
     .stAppDeployButton {display: none;}
     [data-testid="stStatusWidget"] {display: none;}
     
-    /* Estilo del botón de WhatsApp original */
+    /* Estilo personalizado para el botón de WhatsApp con el logo */
     .whatsapp-button {
         background-color: #25D366;
         color: white !important;
         padding: 14px 20px;
         text-align: center;
         text-decoration: none;
-        display: block;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
         border-radius: 8px;
         font-weight: bold;
         margin-top: 15px;
         border: none;
+        font-size: 16px;
+    }
+    .whatsapp-button:hover {
+        background-color: #20ba5a;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -73,9 +80,13 @@ with st.container(border=True):
         texto_encoded = urllib.parse.quote(texto_ws)
         link_whatsapp = f"https://wa.me/5493433002458?text={texto_encoded}"
         
+        # Botón modificado con "Contactanos" y un SVG del logo de WhatsApp al lado
         st.markdown(f"""
             <a href="{link_whatsapp}" target="_blank" class="whatsapp-button">
-                📱 (OPCIONAL) INFORMAR POR WHATSAPP
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12.004 2c-5.51 0-9.99 4.49-9.99 10 0 1.91.54 3.7 1.48 5.24l-1.4 5.1 5.23-1.37c1.48.81 3.16 1.27 4.93 1.27 5.51 0 10-4.49 10-10s-4.49-10-10-10zm4.87 14.15c-.21.58-1.22 1.13-1.68 1.19-.46.06-.91.08-2.84-.68-2.47-.97-4.05-3.48-4.17-3.64-.12-.17-1.04-1.38-1.04-2.63 0-1.25.65-1.87.88-2.12.23-.25.5-.31.67-.31.17 0 .33.01.48.01.16.01.37-.06.57.42.21.5.73 1.77.79 1.9.06.12.1.27.02.44-.08.16-.12.27-.25.42-.12.15-.26.33-.37.45-.12.12-.25.26-.11.5.15.24.66 1.09 1.42 1.76.98.86 1.8 1.13 2.06 1.25.25.13.4.1.55-.07.15-.17.65-.75.82-.1.17.15.34.42.92.71.58.29 3.46 1.71 3.54 1.75.08.04.13.19.05.42z"/>
+                </svg>
+                Contactanos
             </a>
             """, unsafe_allow_html=True)
         
@@ -87,35 +98,40 @@ with st.container(border=True):
             st.rerun()
             
     else:
-        # CAMPOS DEL FORMULARIO
-        f1col1, f1col2 = st.columns(2)
-        with f1col1:
-            cliente = st.text_input("Nombre / Razón Social", placeholder="Ej: Juan Pérez").upper()
-        with f1col2:
-            serial = st.text_input("Serial (SN - ASA)", placeholder="Ubicado en la etiqueta")
+        # CREAMOS UN FORMULARIO REAL: Esto elimina el molesto "Press enter to submit" de Streamlit
+        with st.form("formulario_rma_alta", clear_on_submit=False):
+            f1col1, f1col2 = st.columns(2)
+            with f1col1:
+                cliente = st.text_input("Nombre / Razón Social", placeholder="Ej: Juan Pérez").upper()
+            with f1col2:
+                serial = st.text_input("Serial (SN - ASA)", placeholder="Ubicado en la etiqueta")
 
-        f2col1, f2col2 = st.columns(2)
-        with f2col1:
-            producto = st.text_input("Producto", placeholder="Ingrese nombre de producto")
-        with f2col2:
-            fecha_compra = st.date_input("Fecha de Compra", max_value=date.today(), format="DD/MM/YYYY")
+            f2col1, f2col2 = st.columns(2)
+            with f2col1:
+                producto = st.text_input("Producto", placeholder="Ingrese nombre de producto")
+            with f2col2:
+                fecha_compra = st.date_input("Fecha de Compra", max_value=date.today(), format="DD/MM/YYYY")
 
-        motivo = st.selectbox("Motivo del trámite", options=["Seleccione una opción", "RMA", "Devolución"])
-        descripcion = st.text_area("Descripción detallada", placeholder="Describa el motivo o la falla...")
+            motivo = st.selectbox("Motivo del trámite", options=["Seleccione una opción", "RMA", "Devolución"])
+            descripcion = st.text_area("Descripción detallada", placeholder="Describa el motivo o la falla...")
 
-        st.markdown("---")
-        st.markdown("### Método de Contacto")
-        opcion_contacto = st.radio("¿Cómo prefiere que nos contactemos?", options=["WhatsApp", "Correo Electrónico"], horizontal=True)
+            st.markdown("---")
+            st.markdown("### Método de Contacto")
+            opcion_contacto = st.radio("¿Cómo prefiere que nos contactemos?", options=["WhatsApp", "Correo Electrónico"], horizontal=True)
 
-        tel, mail = "", ""
-        if opcion_contacto == "WhatsApp":
-            tel = st.text_input("Número de WhatsApp")
-        else:
-            mail = st.text_input("Dirección de Correo Electrónico")
+            # MÁSCARAS Y EJEMPLOS CORREGIDOS (Aparecen de forma dinámica según la selección)
+            tel, mail = "", ""
+            if opcion_contacto == "WhatsApp":
+                tel = st.text_input("Número de WhatsApp", placeholder="Ej: +5493433002458")
+            else:
+                mail = st.text_input("Dirección de Correo Electrónico", placeholder="Ej: correo@prueba.com")
 
-        st.markdown("---")
-        
-        if st.button("ENVIAR SOLICITUD", type="primary", use_container_width=True):
+            st.markdown("---")
+            
+            # El botón de enviar ahora actúa como el submit del st.form
+            enviar_click = st.form_submit_button("ENVIAR SOLICITUD", type="primary", use_container_width=True)
+            
+        if enviar_click:
             contacto_val = tel if opcion_contacto == "WhatsApp" else mail
             if not cliente or not producto or not serial or motivo == "Seleccione una opción" or not contacto_val:
                 st.error("Por favor, complete todos los campos obligatorios.")
@@ -127,15 +143,15 @@ with st.container(border=True):
                         "serial": serial, "falla": descripcion
                     }
                     
-                    # CORRECCIÓN: Ahora se envía a la columna "Falla" e inicializamos "diagnostico" vacío
+                    # Mapeo correcto de las columnas en Airtable
                     table.create({
                         "Cliente": cliente,
                         "Producto": producto,
                         "Serial": serial,
                         "Compra": str(fecha_compra),
                         "Motivo del trámite": motivo, 
-                        "Falla": descripcion,          # <- CORREGIDO: Mapeado correctamente a la columna Falla
-                        "diagnostico": "",             # <- CORREGIDO: Queda listo para que lo llenes en el admin panel
+                        "Falla": descripcion,          
+                        "diagnostico": "",             
                         "Telefono": tel,      
                         "Email": mail,            
                         "Estado del RMA": "PENDIENTE",

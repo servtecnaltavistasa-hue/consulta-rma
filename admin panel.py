@@ -7,10 +7,17 @@ import io
 # --- 1. CONFIGURACIÓN ---
 st.set_page_config(page_title="Panel RMA", layout="wide")
 
-# CSS original para diseño de tablas y celdas coloridas
+# CSS modificado para ensanchar la app al 100% y dar un diseño limpio
 st.markdown("""
     <style>
-        .block-container { padding-top: 4rem; }
+        /* --- FUERZA EL ANCHO COMPLETO DE LA PÁGINA (SACA LOS BORDES LATERALES) --- */
+        .block-container {
+            max-width: 100% !important;
+            padding-left: 2rem !important;
+            padding-right: 2rem !important;
+            padding-top: 4rem;
+        }
+        
         div[data-testid="stExpander"] { border: 1px solid #444; margin-bottom: 1rem; }
         
         [data-testid="stDataEditor"] div, .stDataTable td {
@@ -308,9 +315,7 @@ with st.expander("⚙️ 2. TICKETS EN PROCESO (Aceptados)", expanded=True):
             df2[c] = df2[c].apply(formatear_para_leer)
         
         with st.form("f2"):
-            # Lógica de visualización de columnas modificada para el Admin
             if st.session_state.rol == "admin":
-                # Se quitó 'comentario' y se agregó 'Serial' luego de 'Producto'
                 c2_cols = ['Cliente', 'Producto', 'Serial', 'Falla', 'Ingreso', 'diagnostico', 'Estado del RMA', 'Finalizado']
                 deshabilitados_t2 = ['Cliente', 'Producto', 'Serial', 'Falla']
             else:

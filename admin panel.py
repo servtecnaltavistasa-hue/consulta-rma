@@ -191,11 +191,17 @@ for col in columnas_requeridas:
         if col in ['Aceptado', 'Finalizado']:
             df_all[col] = df_all[col].apply(lambda x: True if x in [True, 1, "True", "true"] else False)
 
-for col_txt in ['comentario', 'Falla', 'diagnostico', 'Ingreso', 'Resolucion', 'Compra']:
-    df_all[col_txt] = df_all[col_txt].fillna("").apply(lambda x: "" if str(x).strip() in ["None", "none", "nan", "NaN", ""] else str(x))
+for col_txt in ['comentario', 'Falla', 'diagnostico', 'Ingreso', 'Resolucion', 'Compra', 'Cliente', 'Producto', 'Serial']:
+    if col_txt in df_all.columns:
+        df_all[col_txt] = df_all[col_txt].fillna("").apply(lambda x: "" if str(x).strip() in ["None", "none", "nan", "NaN", ""] else str(x))
 
-# --- TABLA 1: POR ACEPTAR ---
-df1 = df_all[(df_all['Aceptado'] == False) & (df_all['Producto'].str.strip() != "")].copy()
+# --- TABLA 1: POR ACEPTAR (CON FILTRO DE FILAS VACÍAS INTEGRADO) ---
+# Filtramos para que solo pasen los que NO están aceptados, tengan un Producto válido Y tengan un Cliente asignado (evitando "None" o strings vacíos)
+df1 = df_all[
+    (df_all['Aceptado'] == False) & 
+    (df_all['Producto'].str.strip() != "") & 
+    (df_all['Cliente'].str.strip() != "")
+].copy()
 
 with st.expander("📥 1. TICKETS POR ACEPTAR (Entrada)", expanded=True):
     if not df1.empty:

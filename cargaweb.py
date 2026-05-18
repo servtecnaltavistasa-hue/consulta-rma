@@ -60,32 +60,32 @@ if busqueda:
                 fecha_compra = f.get('Compra', 'N/A')
                 es_fuera_garantia = "FUERA DE GARANTIA" in estado_valor
                 
-                # Comprobar si está marcado como Finalizado en Airtable
+                # 1. DETECTAR SI EL CHECKBOX 'Finalizado' ESTÁ MARCADO EN AIRTABLE
                 es_finalizado = f.get('Finalizado') in [True, 1, "True", "true"]
                 
-                # Título limpio en texto plano para el expander
-                titulo_expander = f"Cliente: {f.get('Cliente', 'S/D')} - RMA: {f.get('Numero RMA', 'S/D')}"
+                # 2. CONFIGURAR EL ENCABEZADO DEL EXPANDER SEGÚN SU ESTADO
+                # Usamos texto plano con Emojis llamativos porque st.expander no acepta HTML directo.
+                if es_finalizado:
+                    titulo_ficha = f"🔴 [CASO FINALIZADO] | Cliente: {f.get('Cliente', 'S/D')} - RMA: {f.get('Numero RMA', 'S/D')}"
+                else:
+                    titulo_ficha = f"⏳ [EN PROCESO] | Cliente: {f.get('Cliente', 'S/D')} - RMA: {f.get('Numero RMA', 'S/D')}"
                 
                 debe_expandir = True
                 if len(results) > 2 and index > 0:
                     debe_expandir = False
                 
-                with st.expander(titulo_expander, expanded=debe_expandir):
-                    # --- SIMULACIÓN DEL ENCABEZADO CON COLUMNAS INTERNAS ---
-                    col_head1, col_head2 = st.columns([3, 1])
-                    with col_head1:
-                        # Muestra la información del ticket en el sector izquierdo
-                        st.markdown(f"#### Recibo {f.get('Numero RMA', 'S/D')}")
-                    with col_head2:
-                        # Si está finalizado, coloca la leyenda en ROJO alineada a la derecha
-                        if es_finalizado:
-                            st.markdown("<p style='color: #dc3545; font-weight: bold; font-size: 16px; margin: 0; text-align: right;'>🔴 FINALIZADO</p>", unsafe_allow_html=True)
-                        else:
-                            st.markdown("<p style='color: #fd7e14; font-weight: bold; font-size: 16px; margin: 0; text-align: right;'>⏳ EN PROCESO</p>", unsafe_allow_html=True)
-                    
-                    st.markdown("---") # Línea divisoria decorativa del encabezado
+                with st.expander(titulo_ficha, expanded=debe_expandir):
+                    # Banner interno para reforzar visualmente el encabezado en color rojo
+                    if es_finalizado:
+                        st.markdown(
+                            """
+                            <div style="background-color: #dc3545; color: white; font-weight: bold; padding: 8px; border-radius: 4px; text-align: center; margin-bottom: 15px; font-size: 14px;">
+                                🛑 ESTE CASO HA SIDO FINALIZADO
+                            </div>
+                            """, 
+                            unsafe_allow_html=True
+                        )
 
-                    # --- CONTENIDO EN DOS COLUMNARIOS ---
                     col1, col2 = st.columns(2)
                     with col1:
                         st.markdown(f"**Producto:** {f.get('Producto', 'N/A')}")
@@ -101,13 +101,13 @@ if busqueda:
                         st.markdown(f"**Aceptado:** {aceptado_icon}")
                         st.markdown(f"**Estado del RMA:** {f.get('Estado del RMA', 'N/A')}")
                         
-                        # MODIFICACIÓN DE RESOLUCIÓN: Caja de Alerta Roja si está Finalizado
+                        # 3. FECHA DE RESOLUCIÓN REMARCADA EN ROJO SI ESTÁ FINALIZADO
                         if es_finalizado:
                             st.markdown(
                                 f"""
-                                <div style="background-color: #f8d7da; border: 1px solid #f5c6cb; border-left: 5px solid #dc3545; padding: 6px 12px; border-radius: 4px; margin-top: 5px; display: inline-block;">
+                                <div style="background-color: #f8d7da; border: 1px solid #f5c6cb; border-left: 6px solid #dc3545; padding: 6px 12px; border-radius: 4px; margin-top: 5px; display: inline-block; width: 100%;">
                                     <strong style="color: #721c24;">Resolución:</strong> 
-                                    <span style="color: #dc3545; font-weight: bold;">{f.get('Resolucion', 'N/A')}</span>
+                                    <span style="color: #dc3545; font-weight: bold; font-size: 15px;">{f.get('Resolucion', 'N/A')}</span>
                                 </div>
                                 """, 
                                 unsafe_allow_html=True

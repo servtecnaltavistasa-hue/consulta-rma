@@ -144,29 +144,33 @@ def cargar_todos_los_datos():
 # --- 3. CARGA Y MENÚ ---
 df_all = cargar_todos_los_datos()
 
-# --- MENÚ SUPERIOR DE ACCESOS DIRECTOS (CORREGIDO) ---
+# --- MENÚ SUPERIOR DE ACCESOS DIRECTOS (REDIRECCIÓN INMEDIATA) ---
 if st.session_state.rol == "admin":
     c1, c2, c3, c4, c5 = st.columns(5)
     with c1: st.link_button("🔵 Airtable", "https://airtable.com/appjlLix1HpBwnhpS/tblNnoXdIsLFN92Mr/viwLRiCozAc4oVKZY", use_container_width=True)
     with c2: st.link_button("💻 Github", "https://github.com/FedeASA/consulta-rma", use_container_width=True)
     with c3: st.link_button("📝 Texto Clientes", "https://docs.google.com/document/d/1URgFPuVsIoR6LX2diAwFR5rWRKYvmmEwvQ7VXuxSnYg", use_container_width=True)
     
-    with c4: 
-        opcion_seleccionada = st.selectbox(
-            "🚀 Páginas", 
-            ["🚀 Ir a página...", "Formulario", "Consulta", "Streamlit Base"], 
-            label_visibility="collapsed"
-        )
-        # Diccionario con los enlaces correspondientes a cada opción
-        enlaces_paginas = {
-            "Formulario": "https://share.streamlit.io/fedeasa/consulta-rma/main/form.py",
-            "Consulta": "https://share.streamlit.io/fedeasa/consulta-rma/main/consulta.py",
-            "Streamlit Base": "https://share.streamlit.io/"
-        }
-        
-        # Si elige una página válida, le mostramos el botón dinámico para abrirla en nueva pestaña
-        if opcion_seleccionada in enlaces_paginas:
-            st.link_button(f"Abrir {opcion_seleccionada} ↗", enlaces_paginas[opcion_seleccionada], use_container_width=True)
+    with c4:
+        # Inyectamos una lista desplegable HTML con JS nativo para abrir en pestaña nueva al instante
+        st.markdown("""
+            <select class="styled-select" onchange="if(this.value) { window.open(this.value, '_blank'); this.value=''; }" style="
+                width: 100%; 
+                padding: 0.45rem; 
+                border-radius: 0.5rem; 
+                background-color: #262730; 
+                color: white; 
+                border: 1px solid #4a4a4a;
+                font-family: sans-serif;
+                font-size: 14px;
+                cursor: pointer;
+            ">
+                <option value="" selected hidden>🚀 Páginas...</option>
+                <option value="https://formulariorma.streamlit.app/">Formulario</option>
+                <option value="https://rma-altavista.streamlit.app/">Consulta</option>
+                <option value="https://share.streamlit.io/">Streamlit Base</option>
+            </select>
+        """, unsafe_allow_html=True)
 
     with c5: st.link_button("📊 Excel Viejo", "https://docs.google.com/spreadsheets/d/17zp1kEZhVBw1Ul3HkoDZhyQ2IYthjNGS", use_container_width=True)
 

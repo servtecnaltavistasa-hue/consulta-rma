@@ -279,17 +279,24 @@ with st.expander("📥 1. TICKETS POR ACEPTAR (Entrada)", expanded=True):
             
         df1['Compra'] = df1['Compra'].apply(formatear_para_leer)
         with st.form("f1"):
-            c1_cols = ['Cliente', 'Producto', 'Serial', 'Falla', 'Compra', 'Aceptado']
-            esta_deshabilitado_t1 = ['Cliente', 'Producto', 'Serial', 'Falla', 'Compra', 'Aceptado'] if st.session_state.rol != "admin" else ['Serial','Falla']
+            # Lógica de ocultamiento de columnas para la Tabla 1 basado en el Rol
+            if st.session_state.rol == "admin":
+                c1_cols = ['Cliente', 'Producto', 'Serial', 'Falla', 'Compra', 'Aceptado']
+                esta_deshabilitado_t1 = ['Serial', 'Falla']
+            else:
+                # Ocultamos 'Aceptado' y 'Compra' para usuarios comunes
+                c1_cols = ['Cliente', 'Producto', 'Serial', 'Falla']
+                esta_deshabilitado_t1 = ['Cliente', 'Producto', 'Serial', 'Falla']
             
             ed1 = st.data_editor(df1[['id_interno'] + c1_cols].reset_index(drop=True), column_config={"id_interno":None}, disabled=esta_deshabilitado_t1, hide_index=True, use_container_width=True)
             
             if st.form_submit_button("GUARDAR ENTRADAS", disabled=(st.session_state.rol != "admin")):
                 for _, r in ed1.iterrows():
                     orig = df1[df1['id_interno'] == r['id_interno']].iloc[0]
-                    up = {k: r[k] for k in ['Aceptado','Cliente','Producto'] if str(r[k]) != str(orig.get(k,""))}
-                    f, e = formatear_y_validar_fecha(r['Compra'])
-                    if e == "OK" and f: up['Compra'] = f
+                    up = {k: r[k] for k in ['Aceptado','Cliente','Producto'] if k in r and str(r[k]) != str(orig.get(k,""))}
+                    if 'Compra' in r:
+                        f, e = formatear_y_validar_fecha(r['Compra'])
+                        if e == "OK" and f: up['Compra'] = f
                     if up: table.update(r['id_interno'], up)
                 st.cache_data.clear(); st.rerun()
     else:
@@ -303,13 +310,16 @@ with st.expander("⚙️ 2. TICKETS EN PROCESO (Aceptados)", expanded=True):
             df2[c] = df2[c].apply(formatear_para_leer)
         
         with st.form("f2"):
-            c2_cols = ['comentario', 'Cliente', 'Producto', 'Compra', 'Falla', 'Ingreso', 'diagnostico', 'Estado del RMA', 'Resolucion', 'Finalizado']
-            st_df2 = df2[['id_interno'] + c2_cols]
-            
+            # Lógica de ocultamiento de columnas para la Tabla 2 basado en el Rol
             if st.session_state.rol == "admin":
+                c2_cols = ['comentario', 'Cliente', 'Producto', 'Compra', 'Falla', 'Ingreso', 'diagnostico', 'Estado del RMA', 'Resolucion', 'Finalizado']
                 deshabilitados_t2 = ['Cliente', 'Producto', 'Compra', 'Falla']
             else:
-                deshabilitados_t2 = ['Cliente', 'Producto', 'Compra', 'Falla', 'Ingreso', 'diagnostico', 'Estado del RMA', 'Resolucion', 'Finalizado']
+                # Ocultamos 'Finalizado', 'Compra' y 'Falla' (quedan 7 columnas en total en esta vista)
+                c2_cols = ['comentario', 'Cliente', 'Producto', 'Ingreso', 'diagnostico', 'Estado del RMA', 'Resolucion']
+                deshabilitados_t2 = ['Cliente', 'Producto', 'Ingreso', 'diagnostico', 'Estado del RMA', 'Resolucion']
+            
+            st_df2 = df2[['id_interno'] + c2_cols]
             
             ed2 = st.data_editor(
                 st_df2.style.apply(estilo_filas, axis=1), 
@@ -329,12 +339,13 @@ with st.expander("⚙️ 2. TICKETS EN PROCESO (Aceptados)", expanded=True):
                 for _, r in ed2.iterrows():
                     orig = df2[df2['id_interno'] == r['id_interno']].iloc[0]
                     campos_a_revisar = ['comentario', 'diagnostico', 'Estado del RMA', 'Finalizado'] if st.session_state.rol == "admin" else ['comentario']
-                    up = {k: r[k] for k in campos_a_revisar if str(r[k]) != str(orig.get(k, ""))}
+                    up = {k: r[k] for k in campos_a_revisar if k in r and str(r[k]) != str(orig.get(k, ""))}
                     
                     if st.session_state.rol == "admin":
                         for f in ['Ingreso', 'Resolucion']:
-                            val, stt = formatear_y_validar_fecha(r[f])
-                            if stt == "OK": up[f] = val
+                            if f in r:
+                                val, stt = formatear_y_validar_fecha(r[f])
+                                if stt == "OK": up[f] = val
                     
                     if up: table.update(r['id_interno'], up)
                 st.cache_data.clear(); st.rerun()

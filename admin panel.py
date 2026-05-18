@@ -260,7 +260,7 @@ if df_all.empty:
     st.stop()
 
 # --- SANEAMIENTO SEGURO DE COLUMNAS ---
-columnas_requeridas = ['Aceptado', 'Finalizado', 'Ingreso', 'Resolucion', 'diagnostico', 'Estado del RMA', 'Compra', 'Producto', 'comentario', 'Falla', 'Serial']
+columnas_requeridas = ['Aceptado', 'Finalizado', 'Ingreso', 'Resolucion', 'diagnostico', 'Estado del RMA', 'Compra', 'Producto', 'comentario', 'Falla', 'Serial', 'Numero de RMA']
 for col in columnas_requeridas:
     if col not in df_all.columns: 
         df_all[col] = False if col in ['Aceptado', 'Finalizado'] else ""
@@ -268,7 +268,7 @@ for col in columnas_requeridas:
         if col in ['Aceptado', 'Finalizado']:
             df_all[col] = df_all[col].apply(lambda x: True if x in [True, 1, "True", "true"] else False)
 
-for col_txt in ['comentario', 'Falla', 'diagnostico', 'Ingreso', 'Resolucion', 'Compra', 'Cliente', 'Producto', 'Serial']:
+for col_txt in ['comentario', 'Falla', 'diagnostico', 'Ingreso', 'Resolucion', 'Compra', 'Cliente', 'Producto', 'Serial', 'Numero de RMA']:
     if col_txt in df_all.columns:
         df_all[col_txt] = df_all[col_txt].fillna("").apply(lambda x: "" if str(x).strip() in ["None", "none", "nan", "NaN", ""] else str(x))
 
@@ -316,8 +316,9 @@ with st.expander("⚙️ 2. TICKETS EN PROCESO (Aceptados)", expanded=True):
         
         with st.form("f2"):
             if st.session_state.rol == "admin":
-                c2_cols = ['Cliente', 'Producto', 'Serial', 'Falla', 'Ingreso', 'diagnostico', 'Estado del RMA', 'Finalizado']
-                deshabilitados_t2 = ['Cliente', 'Producto', 'Serial', 'Falla']
+                # Se agregó 'Numero de RMA' a la izquierda de 'Cliente'
+                c2_cols = ['Numero de RMA', 'Cliente', 'Producto', 'Serial', 'Falla', 'Ingreso', 'diagnostico', 'Estado del RMA', 'Finalizado']
+                deshabilitados_t2 = ['Numero de RMA', 'Cliente', 'Producto', 'Serial', 'Falla']
             else:
                 c2_cols = ['comentario', 'Cliente', 'Producto', 'Ingreso', 'diagnostico', 'Estado del RMA', 'Resolucion']
                 deshabilitados_t2 = ['Cliente', 'Producto', 'Ingreso', 'diagnostico', 'Estado del RMA', 'Resolucion']
@@ -328,6 +329,7 @@ with st.expander("⚙️ 2. TICKETS EN PROCESO (Aceptados)", expanded=True):
                 st_df2.style.apply(estilo_filas, axis=1), 
                 column_config={
                     "id_interno": None, 
+                    "Numero de RMA": st.column_config.TextColumn("🔢 Nº RMA"),
                     "comentario": st.column_config.TextColumn("💬 Comentario", width="medium"),
                     "diagnostico": st.column_config.TextColumn("🔧 Diagnóstico", width="medium"),
                     "Finalizado": st.column_config.CheckboxColumn("Finalizar"), 
@@ -363,15 +365,17 @@ with st.expander("✅ 3. CASOS RESUELTOS (Histórico)"):
         df3['Resolucion'] = df3['Resolucion'].apply(formatear_para_leer)
         
         with st.form("f3"):
-            c3_cols = ['comentario', 'Cliente', 'Producto', 'diagnostico', 'Estado del RMA', 'Resolucion']
+            # Se agregó 'Numero de RMA' a la izquierda de 'Cliente' en el Histórico
+            c3_cols = ['Numero de RMA', 'comentario', 'Cliente', 'Producto', 'diagnostico', 'Estado del RMA', 'Resolucion']
             st_df3 = df3[['id_interno'] + c3_cols]
             
-            deshabilitados_t3 = ['Cliente', 'Producto', 'diagnostico', 'Estado del RMA', 'Resolucion']
+            deshabilitados_t3 = ['Numero de RMA', 'Cliente', 'Producto', 'diagnostico', 'Estado del RMA', 'Resolucion']
             
             ed3 = st.data_editor(
                 st_df3.style.apply(estilo_filas, axis=1),
                 column_config={
                     "id_interno": None,
+                    "Numero de RMA": st.column_config.TextColumn("🔢 Nº RMA"),
                     "comentario": st.column_config.TextColumn("💬 Comentario", width="medium"),
                     "diagnostico": st.column_config.TextColumn("🔧 Diagnóstico", width="medium")
                 },

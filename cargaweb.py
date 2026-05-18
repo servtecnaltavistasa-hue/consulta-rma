@@ -63,7 +63,7 @@ if busqueda:
                 # Comprobar si está marcado como Finalizado en Airtable
                 es_finalizado = f.get('Finalizado') in [True, 1, "True", "true"]
                 
-                # Título en texto plano para el expander (Previene que falle el renderizado)
+                # Título limpio en texto plano para el expander
                 titulo_expander = f"Cliente: {f.get('Cliente', 'S/D')} - RMA: {f.get('Numero RMA', 'S/D')}"
                 
                 debe_expandir = True
@@ -71,26 +71,21 @@ if busqueda:
                     debe_expandir = False
                 
                 with st.expander(titulo_expander, expanded=debe_expandir):
-                    # SOLUCIÓN DE ENCABEZADO: Insertamos la alerta roja/naranja de estado al principio de la tarjeta
-                    if es_finalizado:
-                        st.markdown(
-                            """
-                            <div style="background-color: #dc3545; color: white; font-weight: bold; padding: 6px 12px; border-radius: 4px; text-align: center; margin-bottom: 12px; font-size: 14px; letter-spacing: 0.5px;">
-                                🔴 ESTADO DEL CASO: FINALIZADO
-                            </div>
-                            """, 
-                            unsafe_allow_html=True
-                        )
-                    else:
-                        st.markdown(
-                            f"""
-                            <div style="background-color: #fd7e14; color: black; font-weight: bold; padding: 6px 12px; border-radius: 4px; text-align: center; margin-bottom: 12px; font-size: 14px;">
-                                ⏳ ESTADO DEL CASO: EN PROCESO ({f.get('Estado del RMA', 'N/A')})
-                            </div>
-                            """, 
-                            unsafe_allow_html=True
-                        )
+                    # --- SIMULACIÓN DEL ENCABEZADO CON COLUMNAS INTERNAS ---
+                    col_head1, col_head2 = st.columns([3, 1])
+                    with col_head1:
+                        # Muestra la información del ticket en el sector izquierdo
+                        st.markdown(f"#### Recibo {f.get('Numero RMA', 'S/D')}")
+                    with col_head2:
+                        # Si está finalizado, coloca la leyenda en ROJO alineada a la derecha
+                        if es_finalizado:
+                            st.markdown("<p style='color: #dc3545; font-weight: bold; font-size: 16px; margin: 0; text-align: right;'>🔴 FINALIZADO</p>", unsafe_allow_html=True)
+                        else:
+                            st.markdown("<p style='color: #fd7e14; font-weight: bold; font-size: 16px; margin: 0; text-align: right;'>⏳ EN PROCESO</p>", unsafe_allow_html=True)
+                    
+                    st.markdown("---") # Línea divisoria decorativa del encabezado
 
+                    # --- CONTENIDO EN DOS COLUMNARIOS ---
                     col1, col2 = st.columns(2)
                     with col1:
                         st.markdown(f"**Producto:** {f.get('Producto', 'N/A')}")
@@ -106,7 +101,7 @@ if busqueda:
                         st.markdown(f"**Aceptado:** {aceptado_icon}")
                         st.markdown(f"**Estado del RMA:** {f.get('Estado del RMA', 'N/A')}")
                         
-                        # MODIFICACIÓN SOLICITADA: Fecha de resolución remarcada en rojo
+                        # MODIFICACIÓN DE RESOLUCIÓN: Caja de Alerta Roja si está Finalizado
                         if es_finalizado:
                             st.markdown(
                                 f"""

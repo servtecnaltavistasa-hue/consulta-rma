@@ -1,6 +1,7 @@
 import streamlit as st
 from pyairtable import Api
 import urllib.parse
+from datetime import datetime
 
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="RMA ALTAVISTA SA", layout="centered")
@@ -27,6 +28,22 @@ except Exception:
 
 api = Api(AIRTABLE_TOKEN)
 table = api.table(BASE_ID, TABLE_NAME)
+
+# --- FUNCIONES DE APOYO ---
+def formatear_fecha_cliente(fecha_raw):
+    """Convierte fechas YYYY-MM-DD de Airtable a formato legible DD/MM/YYYY"""
+    if not fecha_raw or str(fecha_raw).strip() in ["None", "none", "nan", "NaN", ""]: 
+        return "N/A"
+    
+    fecha_str = str(fecha_raw).replace('-', '/').strip()
+    # Intenta parsear los formatos más comunes que devuelven las APIs
+    for formato in ['%Y/%m/%d', '%Y-%m-%d', '%d/%m/%Y']:
+        try:
+            dt = datetime.strptime(fecha_str, formato)
+            return dt.strftime('%d/%m/%Y')
+        except ValueError:
+            continue
+    return str(fecha_raw)
 
 # --- CABECERA ---
 st.markdown("<h1 style='text-align: center;'>RMA ALTAVISTA SA</h1>", unsafe_allow_html=True)
@@ -68,8 +85,11 @@ if busqueda:
                 f = record['fields']
                 estado_valor = str(f.get('Estado del RMA', '')).strip().upper()
                 diagnostico_texto = f.get('diagnostico', 'Sin diagnóstico registrado.')
-                fecha_compra = f.get('Compra', 'N/A')
                 es_fuera_garantia = "FUERA DE GARANTIA" in estado_valor
+                
+                # FORMATEAR LAS FECHAS A DD/MM/YYYY
+                fecha_compra = formatear_fecha_cliente(f.get('Compra'))
+                fecha_resolucion = formatear_fecha_cliente(f.get('Resolucion'))
                 
                 # 1. IDENTIFICAR SI EL CASO ESTÁ FINALIZADO
                 es_finalizado = f.get('Finalizado') in [True, 1, "True", "true"]
@@ -102,9 +122,9 @@ if busqueda:
                         
                         # 3. FECHA DE RESOLUCIÓN REMARCADA EN ROJO SI ESTÁ FINALIZADO
                         if es_finalizado:
-                            st.markdown(f"**Resolución:** :red[{f.get('Resolucion', 'N/A')}]")
+                            st.markdown(f"**Resolución:** :red[{fecha_resolucion}]")
                         else:
-                            st.markdown(f"**Resolución:** {f.get('Resolucion', 'N/A')}")
+                            st.markdown(f"**Resolución:** {fecha_resolucion}")
                         
                         # AGREGAR EL DATO COMENTARIO SI TIENE CONTENIDO EN AIRTABLE
                         comentario_texto = f.get('comentario', '')

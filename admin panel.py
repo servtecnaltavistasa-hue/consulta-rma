@@ -7,7 +7,7 @@ import io
 # --- 1. CONFIGURACIÓN ---
 st.set_page_config(page_title="Panel RMA", layout="wide")
 
-# CSS modificado para ensanchar la app al 100% y dar un diseño limpio
+# CSS para ensanchar la app al 100% y dar un diseño limpio
 st.markdown("""
     <style>
         /* --- FUERZA EL ANCHO COMPLETO DE LA PÁGINA (SACA LOS BORDES LATERALES) --- */
@@ -192,7 +192,7 @@ if st.session_state.get('mostrar_input_reporte', False):
                 for f in ['Compra', 'Ingreso', 'Resolucion']:
                     df_exc[f] = df_exc[f].apply(formatear_para_leer)
 
-                # Exportación segura compatible con versiones nuevas de Pandas
+                # Exportación limpia compatible con Python 3.14 y Pandas modernos
                 output = io.BytesIO()
                 with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
                     df_exc.to_excel(writer, index=False, sheet_name='Reporte', startrow=2)
@@ -227,12 +227,12 @@ if st.session_state.get('mostrar_input_reporte', False):
                     for col_num, header_title in enumerate(df_exc.columns):
                         worksheet.write(1, col_num, header_title, formato_encabezado)
                     
-                    # Autoajuste y re-escritura manual para asegurar bordes en todas las filas (incluida la última)
+                    # Solución robusta para el autoajuste de celdas en Python 3.14
                     for i, col in enumerate(df_exc.columns):
-                        max_len = df_exc[col].astype(str).str.len().max()
-                        if pd.isna(max_len) or max_len < 0:
-                            max_len = 12
-                        max_len = max(int(max_len), len(col)) + 4  
+                        # Convertimos de forma segura a string para calcular longitudes sin que rompa map/len
+                        lista_valores = df_exc[col].astype(str).tolist()
+                        max_len = max([len(str(val)) for val in lista_valores]) if lista_valores else 0
+                        max_len = max(max_len, len(col)) + 4
                         worksheet.set_column(i, i, max_len)
                         
                         for row_idx in range(len(df_exc)):
@@ -259,8 +259,8 @@ if df_all.empty:
     st.warning("No hay datos para mostrar.")
     st.stop()
 
-# --- SANEAMIENTO SEGURO DE COLUMNAS ---
-columnas_requeridas = ['Aceptado', 'Finalizado', 'Ingreso', 'Resolucion', 'diagnostico', 'Estado del RMA', 'Compra', 'Producto', 'comentario', 'Falla', 'Serial', 'Numero de RMA']
+# --- SANEAMIENTO SEGURO DE COLUMNAS (Corregido a 'Numero RMA') ---
+columnas_requeridas = ['Aceptado', 'Finalizado', 'Ingreso', 'Resolucion', 'diagnostico', 'Estado del RMA', 'Compra', 'Producto', 'comentario', 'Falla', 'Serial', 'Numero RMA']
 for col in columnas_requeridas:
     if col not in df_all.columns: 
         df_all[col] = False if col in ['Aceptado', 'Finalizado'] else ""
@@ -268,9 +268,11 @@ for col in columnas_requeridas:
         if col in ['Aceptado', 'Finalizado']:
             df_all[col] = df_all[col].apply(lambda x: True if x in [True, 1, "True", "true"] else False)
 
-for col_txt in ['comentario', 'Falla', 'diagnostico', 'Ingreso', 'Resolucion', 'Compra', 'Cliente', 'Producto', 'Serial', 'Numero de RMA']:
+for col_txt in ['comentario', 'Falla', 'diagnostico', 'Ingreso', 'Resolucion', 'Compra', 'Cliente', 'Producto', 'Serial', 'Numero RMA']:
     if col_txt in df_all.columns:
-        df_all[col_txt] = df_all[col_txt].fillna("").apply(lambda x: "" if str(x).strip() in ["None", "none", "nan", "NaN", ""] else str(x))
+        # Forzar conversión limpia a texto sin dejar .0 si viene como flotante de Airtable
+        df_all[col_txt] = df_all[col_txt].fillna("").apply(lambda x: str(int(x)) if isinstance(x, float) and x.is_integer() else str(x))
+        df_all[col_txt] = df_all[col_txt].apply(lambda x: "" if str(x).strip() in ["None", "none", "nan", "NaN", ""] else str(x).strip())
 
 # --- TABLA 1: POR ACEPTAR ---
 df1 = df_all[
@@ -316,9 +318,9 @@ with st.expander("⚙️ 2. TICKETS EN PROCESO (Aceptados)", expanded=True):
         
         with st.form("f2"):
             if st.session_state.rol == "admin":
-                # Se agregó 'Numero de RMA' a la izquierda de 'Cliente'
-                c2_cols = ['Numero de RMA', 'Cliente', 'Producto', 'Serial', 'Falla', 'Ingreso', 'diagnostico', 'Estado del RMA', 'Finalizado']
-                deshabilitados_t2 = ['Numero de RMA', 'Cliente', 'Producto', 'Serial', 'Falla']
+                # Campo mapeado de manera idéntica a Airtable: 'Numero RMA'
+                c2_cols = ['Numero RMA', 'Cliente', 'Producto', 'Serial', 'Falla', 'Ingreso', 'diagnostico', 'Estado del RMA', 'Finalizado']
+                deshabilitados_t2 = ['Numero RMA', 'Cliente', 'Producto', 'Serial', 'Falla']
             else:
                 c2_cols = ['comentario', 'Cliente', 'Producto', 'Ingreso', 'diagnostico', 'Estado del RMA', 'Resolucion']
                 deshabilitados_t2 = ['Cliente', 'Producto', 'Ingreso', 'diagnostico', 'Estado del RMA', 'Resolucion']
@@ -329,7 +331,7 @@ with st.expander("⚙️ 2. TICKETS EN PROCESO (Aceptados)", expanded=True):
                 st_df2.style.apply(estilo_filas, axis=1), 
                 column_config={
                     "id_interno": None, 
-                    "Numero de RMA": st.column_config.TextColumn("🔢 Nº RMA"),
+                    "Numero RMA": st.column_config.TextColumn("🔢 Nº RMA", width="small"),
                     "comentario": st.column_config.TextColumn("💬 Comentario", width="medium"),
                     "diagnostico": st.column_config.TextColumn("🔧 Diagnóstico", width="medium"),
                     "Finalizado": st.column_config.CheckboxColumn("Finalizar"), 
@@ -365,17 +367,16 @@ with st.expander("✅ 3. CASOS RESUELTOS (Histórico)"):
         df3['Resolucion'] = df3['Resolucion'].apply(formatear_para_leer)
         
         with st.form("f3"):
-            # Se agregó 'Numero de RMA' a la izquierda de 'Cliente' en el Histórico
-            c3_cols = ['Numero de RMA', 'comentario', 'Cliente', 'Producto', 'diagnostico', 'Estado del RMA', 'Resolucion']
+            c3_cols = ['Numero RMA', 'comentario', 'Cliente', 'Producto', 'diagnostico', 'Estado del RMA', 'Resolucion']
             st_df3 = df3[['id_interno'] + c3_cols]
             
-            deshabilitados_t3 = ['Numero de RMA', 'Cliente', 'Producto', 'diagnostico', 'Estado del RMA', 'Resolucion']
+            deshabilitados_t3 = ['Numero RMA', 'Cliente', 'Producto', 'diagnostico', 'Estado del RMA', 'Resolucion']
             
             ed3 = st.data_editor(
                 st_df3.style.apply(estilo_filas, axis=1),
                 column_config={
                     "id_interno": None,
-                    "Numero de RMA": st.column_config.TextColumn("🔢 Nº RMA"),
+                    "Numero RMA": st.column_config.TextColumn("🔢 Nº RMA", width="small"),
                     "comentario": st.column_config.TextColumn("💬 Comentario", width="medium"),
                     "diagnostico": st.column_config.TextColumn("🔧 Diagnóstico", width="medium")
                 },

@@ -142,7 +142,19 @@ if st.session_state.rol == "admin":
     with c1: st.link_button("🔵 Airtable", "https://airtable.com/appjlLix1HpBwnhpS/tblNnoXdIsLFN92Mr/viwLRiCozAc4oVKZY", use_container_width=True)
     with c2: st.link_button("💻 Github", "https://github.com/FedeASA/consulta-rma", use_container_width=True)
     with c3: st.link_button("📝 Texto Clientes", "https://docs.google.com/document/d/1URgFPuVsIoR6LX2diAwFR5rWRKYvmmEwvQ7VXuxSnYg", use_container_width=True)
-    with c4: st.selectbox("🚀 Páginas", ["Navegar...", "Formulario", "Consulta"], label_visibility="collapsed")
+    
+    # NUEVA OPCIÓN AGREGADA AL MENÚ DESPLEGABLE ("Streamlit Base")
+    with c4: 
+        opcion_seleccionada = st.selectbox(
+            "🚀 Páginas", 
+            ["Navegar...", "Formulario", "Consulta", "Streamlit Base"], 
+            label_visibility="collapsed"
+        )
+        # Redirección si se selecciona la nueva opción externa
+        if opcion_seleccionada == "Streamlit Base":
+            st.markdown('<meta http-equiv="refresh" content="0;URL=\'https://share.streamlit.io/\'">', unsafe_allow_html=True)
+            st.link_button("Abrir Streamlit Base manualmente", "https://share.streamlit.io/", use_container_width=True)
+
     with c5: st.link_button("📊 Excel Viejo", "https://docs.google.com/spreadsheets/d/17zp1kEZhVBw1Ul3HkoDZhyQ2IYthjNGS", use_container_width=True)
 
     col_rep1, col_rep2 = st.columns([1, 4])
@@ -175,7 +187,7 @@ if st.session_state.rol == "admin":
 
                     # --- CONFIGURACIÓN DE ESTILOS DE XLSXWRITER ---
                     output = io.BytesIO()
-                    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                    with pd.ExcelWriter(output, engine='xlsxwriter', style_converter=None) as writer:
                         df_exc.to_excel(writer, index=False, sheet_name='Reporte', startrow=2)
                         
                         workbook  = writer.book
@@ -301,7 +313,7 @@ with st.expander("⚙️ 2. TICKETS EN PROCESO (Aceptados)", expanded=True):
             if st.session_state.rol == "admin":
                 deshabilitados_t2 = ['Cliente', 'Producto', 'Compra', 'Falla']
             else:
-                deshabilitados_t2 = ['Cliente', 'Producto', 'Compra', 'Faria', 'Ingreso', 'diagnostico', 'Estado del RMA', 'Resolucion', 'Finalizado']
+                deshabilitados_t2 = ['Cliente', 'Producto', 'Compra', 'Falla', 'Ingreso', 'diagnostico', 'Estado del RMA', 'Resolucion', 'Finalizado']
             
             ed2 = st.data_editor(
                 st_df2.style.apply(estilo_filas, axis=1), 

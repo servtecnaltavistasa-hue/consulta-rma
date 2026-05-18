@@ -144,7 +144,7 @@ def cargar_todos_los_datos():
 # --- 3. CARGA Y MENÚ ---
 df_all = cargar_todos_los_datos()
 
-# Menú superior exclusivo de administradores
+# --- MENÚ SUPERIOR DE ACCESOS DIRECTOS (CORREGIDO) ---
 if st.session_state.rol == "admin":
     c1, c2, c3, c4, c5 = st.columns(5)
     with c1: st.link_button("🔵 Airtable", "https://airtable.com/appjlLix1HpBwnhpS/tblNnoXdIsLFN92Mr/viwLRiCozAc4oVKZY", use_container_width=True)
@@ -154,12 +154,19 @@ if st.session_state.rol == "admin":
     with c4: 
         opcion_seleccionada = st.selectbox(
             "🚀 Páginas", 
-            ["Navegar...", "Formulario", "Consulta", "Streamlit Base"], 
+            ["🚀 Ir a página...", "Formulario", "Consulta", "Streamlit Base"], 
             label_visibility="collapsed"
         )
-        if opcion_seleccionada == "Streamlit Base":
-            st.markdown('<meta http-equiv="refresh" content="0;URL=\'https://share.streamlit.io/\'">', unsafe_allow_html=True)
-            st.link_button("Abrir Streamlit Base manualmente", "https://share.streamlit.io/", use_container_width=True)
+        # Diccionario con los enlaces correspondientes a cada opción
+        enlaces_paginas = {
+            "Formulario": "https://share.streamlit.io/fedeasa/consulta-rma/main/form.py",
+            "Consulta": "https://share.streamlit.io/fedeasa/consulta-rma/main/consulta.py",
+            "Streamlit Base": "https://share.streamlit.io/"
+        }
+        
+        # Si elige una página válida, le mostramos el botón dinámico para abrirla en nueva pestaña
+        if opcion_seleccionada in enlaces_paginas:
+            st.link_button(f"Abrir {opcion_seleccionada} ↗", enlaces_paginas[opcion_seleccionada], use_container_width=True)
 
     with c5: st.link_button("📊 Excel Viejo", "https://docs.google.com/spreadsheets/d/17zp1kEZhVBw1Ul3HkoDZhyQ2IYthjNGS", use_container_width=True)
 
@@ -229,7 +236,6 @@ if st.session_state.get('mostrar_input_reporte', False):
                     
                     # Solución robusta para el autoajuste de celdas en Python 3.14
                     for i, col in enumerate(df_exc.columns):
-                        # Convertimos de forma segura a string para calcular longitudes sin que rompa map/len
                         lista_valores = df_exc[col].astype(str).tolist()
                         max_len = max([len(str(val)) for val in lista_valores]) if lista_valores else 0
                         max_len = max(max_len, len(col)) + 4
@@ -259,7 +265,7 @@ if df_all.empty:
     st.warning("No hay datos para mostrar.")
     st.stop()
 
-# --- SANEAMIENTO SEGURO DE COLUMNAS (Corregido a 'Numero RMA') ---
+# --- SANEAMIENTO SEGURO DE COLUMNAS ---
 columnas_requeridas = ['Aceptado', 'Finalizado', 'Ingreso', 'Resolucion', 'diagnostico', 'Estado del RMA', 'Compra', 'Producto', 'comentario', 'Falla', 'Serial', 'Numero RMA']
 for col in columnas_requeridas:
     if col not in df_all.columns: 
@@ -270,7 +276,6 @@ for col in columnas_requeridas:
 
 for col_txt in ['comentario', 'Falla', 'diagnostico', 'Ingreso', 'Resolucion', 'Compra', 'Cliente', 'Producto', 'Serial', 'Numero RMA']:
     if col_txt in df_all.columns:
-        # Forzar conversión limpia a texto sin dejar .0 si viene como flotante de Airtable
         df_all[col_txt] = df_all[col_txt].fillna("").apply(lambda x: str(int(x)) if isinstance(x, float) and x.is_integer() else str(x))
         df_all[col_txt] = df_all[col_txt].apply(lambda x: "" if str(x).strip() in ["None", "none", "nan", "NaN", ""] else str(x).strip())
 
@@ -318,7 +323,6 @@ with st.expander("⚙️ 2. TICKETS EN PROCESO (Aceptados)", expanded=True):
         
         with st.form("f2"):
             if st.session_state.rol == "admin":
-                # Campo mapeado de manera idéntica a Airtable: 'Numero RMA'
                 c2_cols = ['Numero RMA', 'Cliente', 'Producto', 'Serial', 'Falla', 'Ingreso', 'diagnostico', 'Estado del RMA', 'Finalizado']
                 deshabilitados_t2 = ['Numero RMA', 'Cliente', 'Producto', 'Serial', 'Falla']
             else:

@@ -165,15 +165,70 @@ if st.session_state.rol == "admin":
                         if c not in df_rep.columns: df_rep[c] = ""
                     
                     df_exc = df_rep[cols_sel].copy()
+                    
+                    # --- REPORTE: ORDENAR POR FECHA DE RESOLUCIÓN (MÁS NUEVOS ARRIBA) ---
+                    df_exc['Resolucion_dt'] = pd.to_datetime(df_exc['Resolucion'], errors='coerce')
+                    df_exc = df_exc.sort_values(by='Resolucion_dt', ascending=False).drop(columns=['Resolucion_dt'])
+
+                    # Formateamos todas las fechas para el Excel final
                     for f in ['Compra', 'Ingreso', 'Resolucion']:
                         df_exc[f] = df_exc[f].apply(formatear_para_leer)
 
+                    # --- CONFIGURACIÓN DE ESTILOS DE XLSXWRITER ---
                     output = io.BytesIO()
                     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-                        df_exc.to_excel(writer, index=False, sheet_name='Reporte', startrow=1)
-                        writer.sheets['Reporte'].write(0, 0, f"Cliente: {cliente_buscado}")
+                        df_exc.to_excel(writer, index=False, sheet_name='Reporte', startrow=2)
+                        
+                        workbook  = writer.book
+                        worksheet = writer.sheets['Reporte']
+                        
+                        formato_titulo = workbook.add_format({'bold': True, 'font_size': 14, 'font_name': 'Segoe UI'})
+                        
+                        formato_encabezado = workbook.add_format({
+                            'bold': True,
+                            'font_color': '#FFFFFF',
+                            'bg_color': '#000000',
+                            'border': 1,
+                            'border_color': '#000000',
+                            'align': 'center',
+                            'valign': 'vcenter',
+                            'font_name': 'Segoe UI',
+                            'font_size': 11
+                        })
+                        
+                        formato_celda = workbook.add_format({
+                            'border': 1,
+                            'border_color': '#000000',
+                            'valign': 'vcenter',
+                            'font_name': 'Segoe UI',
+                            'font_size': 10
+                        })
+                        
+                        # Escribimos el título principal arriba
+                        worksheet.write(0, 0, f"REPORTE DE RMA - CLIENTE: {cliente_buscado.upper()}", formato_titulo)
+                        
+                        # Encabezados personalizados Negro/Blanco
+                        for col_num, header_title in enumerate(df_exc.columns):
+                            worksheet.write(1, col_num, header_title, formato_encabezado)
+                        
+                        # AUTOAJUSTE DE ANCHO Y BORDES INTERNOS NEGROS
+                        for i, col in enumerate(df_exc.columns):
+                            max_len = df_exc[col].astype(str).map(len).max()
+                            max_len = max(max_len, len(col)) + 4  # Margen de holgura
+                            worksheet.set_column(i, i, max_len)
+                            
+                            for row_idx in range(len(df_exc)):
+                                val_celda = df_exc.iloc[row_idx, i]
+                                worksheet.write(row_idx + 2, i, val_celda, formato_celda)
+                                
+                        worksheet.set_row(1, 24) # Altura del header
                     
-                    st.download_button(f"📥 Descargar Reporte {cliente_buscado}", output.getvalue(), f"Reporte_{cliente_buscado}.xlsx", "application/vnd.ms-excel")
+                    st.download_button(
+                        label=f"📥 Descargar Reporte {cliente_buscado}", 
+                        data=output.getvalue(), 
+                        file_name=f"Reporte_{cliente_buscado}_{datetime.now().strftime('%d_%m_%Y')}.xlsx", 
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
                 else:
                     st.warning("No hay datos para ese cliente.")
     st.divider()
@@ -195,8 +250,8 @@ for col_txt in ['comentario', 'Falla', 'diagnostico', 'Ingreso', 'Resolucion', '
     if col_txt in df_all.columns:
         df_all[col_txt] = df_all[col_txt].fillna("").apply(lambda x: "" if str(x).strip() in ["None", "none", "nan", "NaN", ""] else str(x))
 
-# --- TABLA 1: POR ACEPTAR (CON FILTRO DE FILAS VACÍAS INTEGRADO) ---
-# Filtramos para que solo pasen los que NO están aceptados, tengan un Producto válido Y tengan un Cliente asignado (evitando "None" o strings vacíos)
+# --- TABLA 1: POR ACEPTAR ---
+# Se limpian registros incompletos o vacíos que vengan de Airtable
 df1 = df_all[
     (df_all['Aceptado'] == False) & 
     (df_all['Producto'].str.strip() != "") & 
@@ -205,7 +260,7 @@ df1 = df_all[
 
 with st.expander("📥 1. TICKETS POR ACEPTAR (Entrada)", expanded=True):
     if not df1.empty:
-        # ORDENAR POR EL CAMPO DE AIRTABLE 'Compra' EN FORMA DESCENDENTE (Más nuevo primero)
+        # ORDENAR POR EL CAMPO EN AIRTABLE 'Compra' EN FORMA DESCENDENTE (Más nuevo arriba)
         if 'Compra' in df1.columns:
             df1 = df1.sort_values(by='Compra', ascending=False)
             

@@ -103,7 +103,7 @@ def estilo_filas(row):
     return [style if col != 'Finalizado' else '' for col in row.index]
 
 def formatear_para_leer(fecha_raw):
-    if not fecha_raw or str(fecha_raw).strip() == "": return ""
+    if not fecha_raw or str(fecha_raw).strip() in ["None", "none", "nan", "NaN", ""]: return ""
     fecha_str = str(fecha_raw).replace('-', '/').strip()
     for formato in ['%Y/%m/%d', '%Y-%m-%d', '%d/%m/%Y', '%d/%m/%y']:
         try:
@@ -165,7 +165,6 @@ if st.session_state.rol == "admin":
                     df_exc = df_rep[cols_sel].copy()
                     
                     # --- REPORTE: ORDENAR POR FECHA DE RESOLUCIÓN (MÁS NUEVOS ARRIBA) ---
-                    # Limpiamos strings raros antes de convertir a datetime para evitar fallos de ordenación
                     df_exc['Resolucion_clean'] = df_exc['Resolucion'].astype(str).str.strip().replace(["None", "none", "nan", "NaN"], "")
                     df_exc['Resolucion_dt'] = pd.to_datetime(df_exc['Resolucion_clean'], errors='coerce')
                     df_exc = df_exc.sort_values(by='Resolucion_dt', ascending=False).drop(columns=['Resolucion_dt', 'Resolucion_clean'])
@@ -209,12 +208,10 @@ if st.session_state.rol == "admin":
                         for col_num, header_title in enumerate(df_exc.columns):
                             worksheet.write(1, col_num, header_title, formato_encabezado)
                         
-                        # --- SOLUCIÓN AL TYPEERROR (AUTOAJUSTE DE ANCHO BLINDADO) ---
+                        # --- AUTOAJUSTE DE ANCHO Y ESCALADO SEGURO DE CELDAS ---
                         for i, col in enumerate(df_exc.columns):
-                            # Convertimos todo a string de forma segura y calculamos el largo máximo usando métodos de string nativos de Pandas
                             max_len = df_exc[col].astype(str).str.len().max()
                             
-                            # Si da nulo, vacío o no es un número válido, le asignamos un tamaño base
                             if pd.isna(max_len) or max_len < 0:
                                 max_len = 12
                                 
@@ -222,7 +219,13 @@ if st.session_state.rol == "admin":
                             worksheet.set_column(i, i, max_len)
                             
                             for row_idx in range(len(df_exc)):
-                                val_celda = df_exc.iloc[row_idx, i]
+                                val_raw = df_exc.iloc[row_idx, i]
+                                # Sanitización: Si es nulo, NaT o string vacío de Pandas, se escribe como texto limpio
+                                if pd.isna(val_raw) or str(val_raw).strip() in ["NaT", "None", "nan", "NaN"]:
+                                    val_celda = ""
+                                else:
+                                    val_celda = str(val_raw)
+                                    
                                 worksheet.write(row_idx + 2, i, val_celda, formato_celda)
                                 
                         worksheet.set_row(1, 24)

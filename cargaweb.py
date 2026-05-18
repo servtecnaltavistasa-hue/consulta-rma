@@ -60,32 +60,21 @@ if busqueda:
                 fecha_compra = f.get('Compra', 'N/A')
                 es_fuera_garantia = "FUERA DE GARANTIA" in estado_valor
                 
-                # 1. DETECTAR SI EL CHECKBOX 'Finalizado' ESTÁ MARCADO EN AIRTABLE
+                # 1. IDENTIFICAR SI EL CASO ESTÁ FINALIZADO (Checkbox de Airtable)
                 es_finalizado = f.get('Finalizado') in [True, 1, "True", "true"]
                 
-                # 2. CONFIGURAR EL ENCABEZADO DEL EXPANDER SEGÚN SU ESTADO
-                # Usamos texto plano con Emojis llamativos porque st.expander no acepta HTML directo.
+                # 2. DEFINIR EL TEXTO PLANO DEL ENCABEZADO CON EL ESTADO REQUERIDO
                 if es_finalizado:
-                    titulo_ficha = f"🔴 [CASO FINALIZADO] | Cliente: {f.get('Cliente', 'S/D')} - RMA: {f.get('Numero RMA', 'S/D')}"
+                    titulo_ficha = f"Cliente: {f.get('Cliente', 'S/D')} - RMA: {f.get('Numero RMA', 'S/D')} | [CASO FINALIZADO]"
                 else:
-                    titulo_ficha = f"⏳ [EN PROCESO] | Cliente: {f.get('Cliente', 'S/D')} - RMA: {f.get('Numero RMA', 'S/D')}"
+                    titulo_ficha = f"Cliente: {f.get('Cliente', 'S/D')} - RMA: {f.get('Numero RMA', 'S/D')} | [EN PROCESO]"
                 
                 debe_expandir = True
                 if len(results) > 2 and index > 0:
                     debe_expandir = False
                 
+                # Creamos el expander con la etiqueta de estado integrada directamente
                 with st.expander(titulo_ficha, expanded=debe_expandir):
-                    # Banner interno para reforzar visualmente el encabezado en color rojo
-                    if es_finalizado:
-                        st.markdown(
-                            """
-                            <div style="background-color: #dc3545; color: white; font-weight: bold; padding: 8px; border-radius: 4px; text-align: center; margin-bottom: 15px; font-size: 14px;">
-                                🛑 ESTE CASO HA SIDO FINALIZADO
-                            </div>
-                            """, 
-                            unsafe_allow_html=True
-                        )
-
                     col1, col2 = st.columns(2)
                     with col1:
                         st.markdown(f"**Producto:** {f.get('Producto', 'N/A')}")
@@ -101,17 +90,9 @@ if busqueda:
                         st.markdown(f"**Aceptado:** {aceptado_icon}")
                         st.markdown(f"**Estado del RMA:** {f.get('Estado del RMA', 'N/A')}")
                         
-                        # 3. FECHA DE RESOLUCIÓN REMARCADA EN ROJO SI ESTÁ FINALIZADO
+                        # 3. COMPONENTE DE LA FECHA DE RESOLUCIÓN REMARCADA EN ROJO
                         if es_finalizado:
-                            st.markdown(
-                                f"""
-                                <div style="background-color: #f8d7da; border: 1px solid #f5c6cb; border-left: 6px solid #dc3545; padding: 6px 12px; border-radius: 4px; margin-top: 5px; display: inline-block; width: 100%;">
-                                    <strong style="color: #721c24;">Resolución:</strong> 
-                                    <span style="color: #dc3545; font-weight: bold; font-size: 15px;">{f.get('Resolucion', 'N/A')}</span>
-                                </div>
-                                """, 
-                                unsafe_allow_html=True
-                            )
+                            st.markdown(f"**Resolución:** :red[{f.get('Resolucion', 'N/A')}]")
                         else:
                             st.markdown(f"**Resolución:** {f.get('Resolucion', 'N/A')}")
                     

@@ -137,120 +137,121 @@ def cargar_todos_los_datos():
 # --- 3. CARGA Y MENÚ ---
 df_all = cargar_todos_los_datos()
 
+# Esta fila de botones superiores (enlaces) queda exclusiva para administradores
 if st.session_state.rol == "admin":
     c1, c2, c3, c4, c5 = st.columns(5)
     with c1: st.link_button("🔵 Airtable", "https://airtable.com/appjlLix1HpBwnhpS/tblNnoXdIsLFN92Mr/viwLRiCozAc4oVKZY", use_container_width=True)
     with c2: st.link_button("💻 Github", "https://github.com/FedeASA/consulta-rma", use_container_width=True)
     with c3: st.link_button("📝 Texto Clientes", "https://docs.google.com/document/d/1URgFPuVsIoR6LX2diAwFR5rWRKYvmmEwvQ7VXuxSnYg", use_container_width=True)
     
-    # NUEVA OPCIÓN AGREGADA AL MENÚ DESPLEGABLE ("Streamlit Base")
     with c4: 
         opcion_seleccionada = st.selectbox(
             "🚀 Páginas", 
             ["Navegar...", "Formulario", "Consulta", "Streamlit Base"], 
             label_visibility="collapsed"
         )
-        # Redirección si se selecciona la nueva opción externa
         if opcion_seleccionada == "Streamlit Base":
             st.markdown('<meta http-equiv="refresh" content="0;URL=\'https://share.streamlit.io/\'">', unsafe_allow_html=True)
             st.link_button("Abrir Streamlit Base manualmente", "https://share.streamlit.io/", use_container_width=True)
 
     with c5: st.link_button("📊 Excel Viejo", "https://docs.google.com/spreadsheets/d/17zp1kEZhVBw1Ul3HkoDZhyQ2IYthjNGS", use_container_width=True)
 
-    col_rep1, col_rep2 = st.columns([1, 4])
-    with col_rep1:
-        btn_reporte = st.button("📊 Reporte", use_container_width=True)
 
-    if btn_reporte:
-        st.session_state.mostrar_input_reporte = not st.session_state.get('mostrar_input_reporte', False)
+# --- HERRAMIENTA DE REPORTE (ACCESIBLE PARA TODOS LOS USUARIOS: ADMIN Y COMUNES) ---
+col_rep1, col_rep2 = st.columns([1, 4])
+with col_rep1:
+    btn_reporte = st.button("📊 Reporte", use_container_width=True)
 
-    if st.session_state.get('mostrar_input_reporte', False):
-        with st.container(border=True):
-            cliente_buscado = st.text_input("Ingrese nombre del Cliente para generar Excel:")
-            if cliente_buscado:
-                df_rep = df_all[df_all['Cliente'].astype(str).str.contains(cliente_buscado, case=False, na=False)].copy() if 'Cliente' in df_all.columns else pd.DataFrame()
-                if not df_rep.empty:
-                    cols_sel = ['Producto', 'Compra', 'Falla', 'Serial', 'Ingreso', 'Estado del RMA', 'Resolucion']
-                    for c in cols_sel:
-                        if c not in df_rep.columns: df_rep[c] = ""
+if btn_reporte:
+    st.session_state.mostrar_input_reporte = not st.session_state.get('mostrar_input_reporte', False)
+
+if st.session_state.get('mostrar_input_reporte', False):
+    with st.container(border=True):
+        cliente_buscado = st.text_input("Ingrese nombre del Cliente para generar Excel:")
+        if cliente_buscado:
+            df_rep = df_all[df_all['Cliente'].astype(str).str.contains(cliente_buscado, case=False, na=False)].copy() if 'Cliente' in df_all.columns else pd.DataFrame()
+            if not df_rep.empty:
+                cols_sel = ['Producto', 'Compra', 'Falla', 'Serial', 'Ingreso', 'Estado del RMA', 'Resolucion']
+                for c in cols_sel:
+                    if c not in df_rep.columns: df_rep[c] = ""
+                
+                df_exc = df_rep[cols_sel].copy()
+                
+                # --- REPORTE: ORDENAR POR FECHA DE RESOLUCIÓN (MÁS NUEVOS ARRIBA) ---
+                df_exc['Resolucion_clean'] = df_exc['Resolucion'].astype(str).str.strip().replace(["None", "none", "nan", "NaN"], "")
+                df_exc['Resolucion_dt'] = pd.to_datetime(df_exc['Resolucion_clean'], errors='coerce')
+                df_exc = df_exc.sort_values(by='Resolucion_dt', ascending=False).drop(columns=['Resolucion_dt', 'Resolucion_clean'])
+
+                # Formateamos todas las fechas para el Excel final visible
+                for f in ['Compra', 'Ingreso', 'Resolucion']:
+                    df_exc[f] = df_exc[f].apply(formatear_para_leer)
+
+                # --- CONFIGURACIÓN DE ESTILOS DE XLSXWRITER ---
+                output = io.BytesIO()
+                with pd.ExcelWriter(output, engine='xlsxwriter', style_converter=None) as writer:
+                    df_exc.to_excel(writer, index=False, sheet_name='Reporte', startrow=2)
                     
-                    df_exc = df_rep[cols_sel].copy()
+                    workbook  = writer.book
+                    worksheet = writer.sheets['Reporte']
                     
-                    # --- REPORTE: ORDENAR POR FECHA DE RESOLUCIÓN (MÁS NUEVOS ARRIBA) ---
-                    df_exc['Resolucion_clean'] = df_exc['Resolucion'].astype(str).str.strip().replace(["None", "none", "nan", "NaN"], "")
-                    df_exc['Resolucion_dt'] = pd.to_datetime(df_exc['Resolucion_clean'], errors='coerce')
-                    df_exc = df_exc.sort_values(by='Resolucion_dt', ascending=False).drop(columns=['Resolucion_dt', 'Resolucion_clean'])
-
-                    # Formateamos todas las fechas para el Excel final visible
-                    for f in ['Compra', 'Ingreso', 'Resolucion']:
-                        df_exc[f] = df_exc[f].apply(formatear_para_leer)
-
-                    # --- CONFIGURACIÓN DE ESTILOS DE XLSXWRITER ---
-                    output = io.BytesIO()
-                    with pd.ExcelWriter(output, engine='xlsxwriter', style_converter=None) as writer:
-                        df_exc.to_excel(writer, index=False, sheet_name='Reporte', startrow=2)
+                    formato_titulo = workbook.add_format({'bold': True, 'font_size': 14, 'font_name': 'Segoe UI'})
+                    
+                    formato_encabezado = workbook.add_format({
+                        'bold': True,
+                        'font_color': '#FFFFFF',
+                        'bg_color': '#000000',
+                        'border': 1,
+                        'border_color': '#000000',
+                        'align': 'center',
+                        'valign': 'vcenter',
+                        'font_name': 'Segoe UI',
+                        'font_size': 11
+                    })
+                    
+                    formato_celda = workbook.add_format({
+                        'border': 1,
+                        'border_color': '#000000',
+                        'valign': 'vcenter',
+                        'font_name': 'Segoe UI',
+                        'font_size': 10
+                    })
+                    
+                    worksheet.write(0, 0, f"REPORTE DE RMA - CLIENTE: {cliente_buscado.upper()}", formato_titulo)
+                    
+                    for col_num, header_title in enumerate(df_exc.columns):
+                        worksheet.write(1, col_num, header_title, formato_encabezado)
+                    
+                    # --- AUTOAJUSTE DE ANCHO Y ESCALADO SEGURO DE CELDAS ---
+                    for i, col in enumerate(df_exc.columns):
+                        max_len = df_exc[col].astype(str).str.len().max()
                         
-                        workbook  = writer.book
-                        worksheet = writer.sheets['Reporte']
-                        
-                        formato_titulo = workbook.add_format({'bold': True, 'font_size': 14, 'font_name': 'Segoe UI'})
-                        
-                        formato_encabezado = workbook.add_format({
-                            'bold': True,
-                            'font_color': '#FFFFFF',
-                            'bg_color': '#000000',
-                            'border': 1,
-                            'border_color': '#000000',
-                            'align': 'center',
-                            'valign': 'vcenter',
-                            'font_name': 'Segoe UI',
-                            'font_size': 11
-                        })
-                        
-                        formato_celda = workbook.add_format({
-                            'border': 1,
-                            'border_color': '#000000',
-                            'valign': 'vcenter',
-                            'font_name': 'Segoe UI',
-                            'font_size': 10
-                        })
-                        
-                        worksheet.write(0, 0, f"REPORTE DE RMA - CLIENTE: {cliente_buscado.upper()}", formato_titulo)
-                        
-                        for col_num, header_title in enumerate(df_exc.columns):
-                            worksheet.write(1, col_num, header_title, formato_encabezado)
-                        
-                        # --- AUTOAJUSTE DE ANCHO Y ESCALADO SEGURO DE CELDAS ---
-                        for i, col in enumerate(df_exc.columns):
-                            max_len = df_exc[col].astype(str).str.len().max()
+                        if pd.isna(max_len) or max_len < 0:
+                            max_len = 12
                             
-                            if pd.isna(max_len) or max_len < 0:
-                                max_len = 12
-                                
-                            max_len = max(int(max_len), len(col)) + 4  
-                            worksheet.set_column(i, i, max_len)
+                        max_len = max(int(max_len), len(col)) + 4  
+                        worksheet.set_column(i, i, max_len)
+                        
+                        for row_idx in range(len(df_exc)):
+                            val_raw = df_exc.iloc[row_idx, i]
                             
-                            for row_idx in range(len(df_exc)):
-                                val_raw = df_exc.iloc[row_idx, i]
+                            if pd.isna(val_raw) or str(val_raw).strip() in ["NaT", "None", "nan", "NaN"]:
+                                val_celda = ""
+                            else:
+                                val_celda = str(val_raw)
                                 
-                                if pd.isna(val_raw) or str(val_raw).strip() in ["NaT", "None", "nan", "NaN"]:
-                                    val_celda = ""
-                                else:
-                                    val_celda = str(val_raw)
-                                    
-                                worksheet.write(row_idx + 2, i, val_celda, formato_celda)
-                                
-                        worksheet.set_row(1, 24)
-                    
-                    st.download_button(
-                        label=f"📥 Descargar Reporte {cliente_buscado}", 
-                        data=output.getvalue(), 
-                        file_name=f"Reporte_{cliente_buscado}_{datetime.now().strftime('%d_%m_%Y')}.xlsx", 
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                    )
-                else:
-                    st.warning("No hay datos para ese cliente.")
-    st.divider()
+                            worksheet.write(row_idx + 2, i, val_celda, formato_celda)
+                            
+                    worksheet.set_row(1, 24)
+                
+                st.download_button(
+                    label=f"📥 Descargar Reporte {cliente_buscado}", 
+                    data=output.getvalue(), 
+                    file_name=f"Reporte_{cliente_buscado}_{datetime.now().strftime('%d_%m_%Y')}.xlsx", 
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+            else:
+                st.warning("No hay datos para ese cliente.")
+st.divider()
 
 if df_all.empty:
     st.warning("No hay datos para mostrar.")

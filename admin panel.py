@@ -54,13 +54,11 @@ def login():
         
         if bot_login:
             try:
-                # Lee los usuarios configurados en el archivo secrets.toml o Streamlit Cloud
                 usuarios_secretos = st.secrets["USUARIOS"]
                 
                 if usuario in usuarios_secretos and usuarios_secretos[usuario] == clave:
                     st.session_state.autenticado = True
                     st.session_state.usuario = usuario
-                    # Si ingresa como 'admin' toma el rol completo, de lo contrario es técnico ('user')
                     st.session_state.rol = "admin" if usuario == "admin" else "user"
                     st.success("¡Acceso concedido!")
                     st.rerun()
@@ -167,10 +165,12 @@ if st.session_state.rol == "admin":
                     df_exc = df_rep[cols_sel].copy()
                     
                     # --- REPORTE: ORDENAR POR FECHA DE RESOLUCIÓN (MÁS NUEVOS ARRIBA) ---
-                    df_exc['Resolucion_dt'] = pd.to_datetime(df_exc['Resolucion'], errors='coerce')
-                    df_exc = df_exc.sort_values(by='Resolucion_dt', ascending=False).drop(columns=['Resolucion_dt'])
+                    # Limpiamos strings raros antes de convertir a datetime para evitar fallos de ordenación
+                    df_exc['Resolucion_clean'] = df_exc['Resolucion'].astype(str).str.strip().replace(["None", "none", "nan", "NaN"], "")
+                    df_exc['Resolucion_dt'] = pd.to_datetime(df_exc['Resolucion_clean'], errors='coerce')
+                    df_exc = df_exc.sort_values(by='Resolucion_dt', ascending=False).drop(columns=['Resolucion_dt', 'Resolucion_clean'])
 
-                    # Formateamos todas las fechas para el Excel final
+                    # Formateamos todas las fechas para el Excel final visible
                     for f in ['Compra', 'Ingreso', 'Resolucion']:
                         df_exc[f] = df_exc[f].apply(formatear_para_leer)
 
@@ -204,24 +204,28 @@ if st.session_state.rol == "admin":
                             'font_size': 10
                         })
                         
-                        # Escribimos el título principal arriba
                         worksheet.write(0, 0, f"REPORTE DE RMA - CLIENTE: {cliente_buscado.upper()}", formato_titulo)
                         
-                        # Encabezados personalizados Negro/Blanco
                         for col_num, header_title in enumerate(df_exc.columns):
                             worksheet.write(1, col_num, header_title, formato_encabezado)
                         
-                        # AUTOAJUSTE DE ANCHO Y BORDES INTERNOS NEGROS
+                        # --- SOLUCIÓN AL TYPEERROR (AUTOAJUSTE DE ANCHO BLINDADO) ---
                         for i, col in enumerate(df_exc.columns):
-                            max_len = df_exc[col].astype(str).map(len).max()
-                            max_len = max(max_len, len(col)) + 4  # Margen de holgura
+                            # Convertimos todo a string de forma segura y calculamos el largo máximo usando métodos de string nativos de Pandas
+                            max_len = df_exc[col].astype(str).str.len().max()
+                            
+                            # Si da nulo, vacío o no es un número válido, le asignamos un tamaño base
+                            if pd.isna(max_len) or max_len < 0:
+                                max_len = 12
+                                
+                            max_len = max(int(max_len), len(col)) + 4  
                             worksheet.set_column(i, i, max_len)
                             
                             for row_idx in range(len(df_exc)):
                                 val_celda = df_exc.iloc[row_idx, i]
                                 worksheet.write(row_idx + 2, i, val_celda, formato_celda)
                                 
-                        worksheet.set_row(1, 24) # Altura del header
+                        worksheet.set_row(1, 24)
                     
                     st.download_button(
                         label=f"📥 Descargar Reporte {cliente_buscado}", 
@@ -251,7 +255,6 @@ for col_txt in ['comentario', 'Falla', 'diagnostico', 'Ingreso', 'Resolucion', '
         df_all[col_txt] = df_all[col_txt].fillna("").apply(lambda x: "" if str(x).strip() in ["None", "none", "nan", "NaN", ""] else str(x))
 
 # --- TABLA 1: POR ACEPTAR ---
-# Se limpian registros incompletos o vacíos que vengan de Airtable
 df1 = df_all[
     (df_all['Aceptado'] == False) & 
     (df_all['Producto'].str.strip() != "") & 
@@ -260,14 +263,12 @@ df1 = df_all[
 
 with st.expander("📥 1. TICKETS POR ACEPTAR (Entrada)", expanded=True):
     if not df1.empty:
-        # ORDENAR POR EL CAMPO EN AIRTABLE 'Compra' EN FORMA DESCENDENTE (Más nuevo arriba)
         if 'Compra' in df1.columns:
             df1 = df1.sort_values(by='Compra', ascending=False)
             
         df1['Compra'] = df1['Compra'].apply(formatear_para_leer)
         with st.form("f1"):
             c1_cols = ['Cliente', 'Producto', 'Serial', 'Falla', 'Compra', 'Aceptado']
-            
             esta_deshabilitado_t1 = ['Cliente', 'Producto', 'Serial', 'Falla', 'Compra', 'Aceptado'] if st.session_state.rol != "admin" else ['Serial','Falla']
             
             ed1 = st.data_editor(df1[['id_interno'] + c1_cols].reset_index(drop=True), column_config={"id_interno":None}, disabled=esta_deshabilitado_t1, hide_index=True, use_container_width=True)

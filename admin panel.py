@@ -253,7 +253,7 @@ if df_all.empty:
     st.stop()
 
 # --- SANEAMIENTO SEGURO DE COLUMNAS ---
-columnas_requeridas = ['Aceptado', 'Finalizado', 'Ingreso', 'Resolucion', 'diagnostico', 'Estado del RMA', 'Compra', 'Producto', 'comentario', 'Falla']
+columnas_requeridas = ['Aceptado', 'Finalizado', 'Ingreso', 'Resolucion', 'diagnostico', 'Estado del RMA', 'Compra', 'Producto', 'comentario', 'Falla', 'Serial']
 for col in columnas_requeridas:
     if col not in df_all.columns: 
         df_all[col] = False if col in ['Aceptado', 'Finalizado'] else ""
@@ -310,9 +310,9 @@ with st.expander("⚙️ 2. TICKETS EN PROCESO (Aceptados)", expanded=True):
         with st.form("f2"):
             # Lógica de visualización de columnas modificada para el Admin
             if st.session_state.rol == "admin":
-                # Se removieron 'Compra' y 'Resolucion' de la vista del Admin
-                c2_cols = ['comentario', 'Cliente', 'Producto', 'Falla', 'Ingreso', 'diagnostico', 'Estado del RMA', 'Finalizado']
-                deshabilitados_t2 = ['Cliente', 'Producto', 'Falla']
+                # Se quitó 'comentario' y se agregó 'Serial' luego de 'Producto'
+                c2_cols = ['Cliente', 'Producto', 'Serial', 'Falla', 'Ingreso', 'diagnostico', 'Estado del RMA', 'Finalizado']
+                deshabilitados_t2 = ['Cliente', 'Producto', 'Serial', 'Falla']
             else:
                 c2_cols = ['comentario', 'Cliente', 'Producto', 'Ingreso', 'diagnostico', 'Estado del RMA', 'Resolucion']
                 deshabilitados_t2 = ['Cliente', 'Producto', 'Ingreso', 'diagnostico', 'Estado del RMA', 'Resolucion']
@@ -340,10 +340,8 @@ with st.expander("⚙️ 2. TICKETS EN PROCESO (Aceptados)", expanded=True):
                     up = {k: r[k] for k in campos_a_revisar if k in r and str(r[k]) != str(orig.get(k, ""))}
                     
                     # --- AUTOMATIZACIÓN DE LA FECHA DE RESOLUCIÓN ---
-                    # Si el admin marcó como Finalizado (y antes estaba en False)
                     if st.session_state.rol == "admin" and 'Finalizado' in up and up['Finalizado'] == True:
                         if not orig.get('Finalizado', False):
-                            # Se completa automáticamente con la fecha de hoy en formato Airtable
                             up['Resolucion'] = date.today().strftime('%Y-%m-%d')
                     
                     if st.session_state.rol == "admin" and 'Ingreso' in r:

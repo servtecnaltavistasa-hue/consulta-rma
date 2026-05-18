@@ -218,7 +218,6 @@ if st.session_state.rol == "admin":
                             max_len = max(int(max_len), len(col)) + 4  
                             worksheet.set_column(i, i, max_len)
                             
-                            # Corregido: Recorremos de manera exacta todas las filas aplicando estilos
                             for row_idx in range(len(df_exc)):
                                 val_raw = df_exc.iloc[row_idx, i]
                                 
@@ -285,7 +284,8 @@ with st.expander("📥 1. TICKETS POR ACEPTAR (Entrada)", expanded=True):
                     if e == "OK" and f: up['Compra'] = f
                     if up: table.update(r['id_interno'], up)
                 st.cache_data.clear(); st.rerun()
-    else: st.info("No hay pendientes.")
+    else:
+        st.info("No hay pendientes.")
 
 # --- TABLA 2: EN PROCESO ---
 df2 = df_all[(df_all['Aceptado'] == True) & (df_all['Finalizado'] == False)].copy().reset_index(drop=True)
@@ -295,4 +295,69 @@ with st.expander("⚙️ 2. TICKETS EN PROCESO (Aceptados)", expanded=True):
             df2[c] = df2[c].apply(formatear_para_leer)
         
         with st.form("f2"):
-            c2_cols =
+            c2_cols = ['comentario', 'Cliente', 'Producto', 'Compra', 'Falla', 'Ingreso', 'diagnostico', 'Estado del RMA', 'Resolucion', 'Finalizado']
+            st_df2 = df2[['id_interno'] + c2_cols]
+            
+            if st.session_state.rol == "admin":
+                deshabilitados_t2 = ['Cliente', 'Producto', 'Compra', 'Falla']
+            else:
+                deshabilitados_t2 = ['Cliente', 'Producto', 'Compra', 'Faria', 'Ingreso', 'diagnostico', 'Estado del RMA', 'Resolucion', 'Finalizado']
+            
+            ed2 = st.data_editor(
+                st_df2.style.apply(estilo_filas, axis=1), 
+                column_config={
+                    "id_interno": None, 
+                    "comentario": st.column_config.TextColumn("💬 Comentario", width="medium"),
+                    "diagnostico": st.column_config.TextColumn("🔧 Diagnóstico", width="medium"),
+                    "Finalizado": st.column_config.CheckboxColumn("Finalizar"), 
+                    "Estado del RMA": st.column_config.SelectboxColumn(options=["CAMBIO", "CREDITO", "GARANTIA OFICIAL", "GARANTIA", "FUERA DE GARANTIA", "NO FALLO - DEVOLVER A CLIENTE", "REPARADO"])
+                }, 
+                disabled=deshabilitados_t2, 
+                hide_index=True, 
+                use_container_width=True
+            )
+            
+            if st.form_submit_button("ACTUALIZAR PROCESOS"):
+                for _, r in ed2.iterrows():
+                    orig = df2[df2['id_interno'] == r['id_interno']].iloc[0]
+                    campos_a_revisar = ['comentario', 'diagnostico', 'Estado del RMA', 'Finalizado'] if st.session_state.rol == "admin" else ['comentario']
+                    up = {k: r[k] for k in campos_a_revisar if str(r[k]) != str(orig.get(k, ""))}
+                    
+                    if st.session_state.rol == "admin":
+                        for f in ['Ingreso', 'Resolucion']:
+                            val, stt = formatear_y_validar_fecha(r[f])
+                            if stt == "OK": up[f] = val
+                    
+                    if up: table.update(r['id_interno'], up)
+                st.cache_data.clear(); st.rerun()
+
+# --- TABLA 3: HISTÓRICO ---
+df3 = df_all[(df_all['Aceptado'] == True) & (df_all['Finalizado'] == True)].copy().reset_index(drop=True)
+with st.expander("✅ 3. CASOS RESUELTOS (Histórico)"):
+    if not df3.empty:
+        df3['Resolucion'] = df3['Resolucion'].apply(formatear_para_leer)
+        
+        with st.form("f3"):
+            c3_cols = ['comentario', 'Cliente', 'Producto', 'diagnostico', 'Estado del RMA', 'Resolucion']
+            st_df3 = df3[['id_interno'] + c3_cols]
+            
+            deshabilitados_t3 = ['Cliente', 'Producto', 'diagnostico', 'Estado del RMA', 'Resolucion']
+            
+            ed3 = st.data_editor(
+                st_df3.style.apply(estilo_filas, axis=1),
+                column_config={
+                    "id_interno": None,
+                    "comentario": st.column_config.TextColumn("💬 Comentario", width="medium"),
+                    "diagnostico": st.column_config.TextColumn("🔧 Diagnóstico", width="medium")
+                },
+                disabled=deshabilitados_t3,
+                hide_index=True,
+                use_container_width=True
+            )
+            
+            if st.form_submit_button("ACTUALIZAR COMENTARIOS HISTÓRICO"):
+                for _, r in ed3.iterrows():
+                    orig = df3[df3['id_interno'] == r['id_interno']].iloc[0]
+                    up = {k: r[k] for k in ['comentario'] if str(r[k]) != str(orig.get(k, ""))}
+                    if up: table.update(r['id_interno'], up)
+                st.cache_data.clear(); st.rerun()

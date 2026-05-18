@@ -43,6 +43,51 @@ st.markdown("""
             background-color: inherit !important;
             color: inherit !important;
         }
+
+        /* --- ESTILOS PARA EL MENÚ DESPLEGABLE HTML REAL --- */
+        .menu-dropdown {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+        .menu-boton {
+            width: 100%; 
+            padding: 0.55rem; 
+            border-radius: 0.5rem; 
+            background-color: #262730; 
+            color: white; 
+            border: 1px solid #4a4a4a;
+            font-family: sans-serif;
+            font-size: 14px;
+            text-align: left;
+            cursor: pointer;
+        }
+        .menu-contenido {
+            display: none;
+            position: absolute;
+            background-color: #1e1e24;
+            min-width: 100%;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.5);
+            z-index: 9999;
+            border-radius: 0.5rem;
+            border: 1px solid #4a4a4a;
+            margin-top: 2px;
+        }
+        .menu-contenido a {
+            color: white;
+            padding: 10px 16px;
+            text-decoration: none;
+            display: block;
+            font-family: sans-serif;
+            font-size: 14px;
+        }
+        .menu-contenido a:hover {
+            background-color: #262730;
+            border-radius: 0.5rem;
+        }
+        .menu-dropdown:hover .menu-contenido {
+            display: block;
+        }
     </style>
     """, unsafe_allow_html=True)
 
@@ -144,7 +189,7 @@ def cargar_todos_los_datos():
 # --- 3. CARGA Y MENÚ ---
 df_all = cargar_todos_los_datos()
 
-# --- MENÚ SUPERIOR DE ACCESOS DIRECTOS (REDIRECCIÓN INMEDIATA) ---
+# --- MENÚ SUPERIOR DE ACCESOS DIRECTOS (ANTI-BLOQUEO POPUPS) ---
 if st.session_state.rol == "admin":
     c1, c2, c3, c4, c5 = st.columns(5)
     with c1: st.link_button("🔵 Airtable", "https://airtable.com/appjlLix1HpBwnhpS/tblNnoXdIsLFN92Mr/viwLRiCozAc4oVKZY", use_container_width=True)
@@ -152,24 +197,17 @@ if st.session_state.rol == "admin":
     with c3: st.link_button("📝 Texto Clientes", "https://docs.google.com/document/d/1URgFPuVsIoR6LX2diAwFR5rWRKYvmmEwvQ7VXuxSnYg", use_container_width=True)
     
     with c4:
-        # Inyectamos una lista desplegable HTML con JS nativo para abrir en pestaña nueva al instante
+        # Menú HTML nativo que simula una lista desplegable al pasar el mouse/hacer click 
+        # y cuyos links usan target="_blank" real, burlando el bloqueo de popups del navegador.
         st.markdown("""
-            <select class="styled-select" onchange="if(this.value) { window.open(this.value, '_blank'); this.value=''; }" style="
-                width: 100%; 
-                padding: 0.45rem; 
-                border-radius: 0.5rem; 
-                background-color: #262730; 
-                color: white; 
-                border: 1px solid #4a4a4a;
-                font-family: sans-serif;
-                font-size: 14px;
-                cursor: pointer;
-            ">
-                <option value="" selected hidden>🚀 Páginas...</option>
-                <option value="https://formulariorma.streamlit.app/">Formulario</option>
-                <option value="https://rma-altavista.streamlit.app/">Consulta</option>
-                <option value="https://share.streamlit.io/">Streamlit Base</option>
-            </select>
+            <div class="menu-dropdown">
+                <button class="menu-boton">🚀 Páginas... ▾</button>
+                <div class="menu-contenido">
+                    <a href="https://formulariorma.streamlit.app/" target="_blank">Formulario ↗</a>
+                    <a href="https://rma-altavista.streamlit.app/" target="_blank">Consulta ↗</a>
+                    <a href="https://share.streamlit.io/" target="_blank">Streamlit Base ↗</a>
+                </div>
+            </div>
         """, unsafe_allow_html=True)
 
     with c5: st.link_button("📊 Excel Viejo", "https://docs.google.com/spreadsheets/d/17zp1kEZhVBw1Ul3HkoDZhyQ2IYthjNGS", use_container_width=True)
@@ -322,80 +360,4 @@ with st.expander("📥 1. TICKETS POR ACEPTAR (Entrada)", expanded=True):
 df2 = df_all[(df_all['Aceptado'] == True) & (df_all['Finalizado'] == False)].copy().reset_index(drop=True)
 with st.expander("⚙️ 2. TICKETS EN PROCESO (Aceptados)", expanded=True):
     if not df2.empty:
-        for c in ['Compra','Ingreso','Resolucion']: 
-            df2[c] = df2[c].apply(formatear_para_leer)
-        
-        with st.form("f2"):
-            if st.session_state.rol == "admin":
-                c2_cols = ['Numero RMA', 'Cliente', 'Producto', 'Serial', 'Falla', 'Ingreso', 'diagnostico', 'Estado del RMA', 'Finalizado']
-                deshabilitados_t2 = ['Numero RMA', 'Cliente', 'Producto', 'Serial', 'Falla']
-            else:
-                c2_cols = ['comentario', 'Cliente', 'Producto', 'Ingreso', 'diagnostico', 'Estado del RMA', 'Resolucion']
-                deshabilitados_t2 = ['Cliente', 'Producto', 'Ingreso', 'diagnostico', 'Estado del RMA', 'Resolucion']
-            
-            st_df2 = df2[['id_interno'] + c2_cols]
-            
-            ed2 = st.data_editor(
-                st_df2.style.apply(estilo_filas, axis=1), 
-                column_config={
-                    "id_interno": None, 
-                    "Numero RMA": st.column_config.TextColumn("🔢 Nº RMA", width="small"),
-                    "comentario": st.column_config.TextColumn("💬 Comentario", width="medium"),
-                    "diagnostico": st.column_config.TextColumn("🔧 Diagnóstico", width="medium"),
-                    "Finalizado": st.column_config.CheckboxColumn("Finalizar"), 
-                    "Estado del RMA": st.column_config.SelectboxColumn(options=["CAMBIO", "CREDITO", "GARANTIA OFICIAL", "GARANTIA", "FUERA DE GARANTIA", "NO FALLO - DEVOLVER A CLIENTE", "REPARADO"])
-                }, 
-                disabled=deshabilitados_t2, 
-                hide_index=True, 
-                use_container_width=True
-            )
-            
-            if st.form_submit_button("ACTUALIZAR PROCESOS"):
-                for _, r in ed2.iterrows():
-                    orig = df2[df2['id_interno'] == r['id_interno']].iloc[0]
-                    campos_a_revisar = ['comentario', 'diagnostico', 'Estado del RMA', 'Finalizado'] if st.session_state.rol == "admin" else ['comentario']
-                    up = {k: r[k] for k in campos_a_revisar if k in r and str(r[k]) != str(orig.get(k, ""))}
-                    
-                    # --- AUTOMATIZACIÓN DE LA FECHA DE RESOLUCIÓN ---
-                    if st.session_state.rol == "admin" and 'Finalizado' in up and up['Finalizado'] == True:
-                        if not orig.get('Finalizado', False):
-                            up['Resolucion'] = date.today().strftime('%Y-%m-%d')
-                    
-                    if st.session_state.rol == "admin" and 'Ingreso' in r:
-                        val, stt = formatear_y_validar_fecha(r['Ingreso'])
-                        if stt == "OK": up['Ingreso'] = val
-                    
-                    if up: table.update(r['id_interno'], up)
-                st.cache_data.clear(); st.rerun()
-
-# --- TABLA 3: HISTÓRICO ---
-df3 = df_all[(df_all['Aceptado'] == True) & (df_all['Finalizado'] == True)].copy().reset_index(drop=True)
-with st.expander("✅ 3. CASOS RESUELTOS (Histórico)"):
-    if not df3.empty:
-        df3['Resolucion'] = df3['Resolucion'].apply(formatear_para_leer)
-        
-        with st.form("f3"):
-            c3_cols = ['Numero RMA', 'comentario', 'Cliente', 'Producto', 'diagnostico', 'Estado del RMA', 'Resolucion']
-            st_df3 = df3[['id_interno'] + c3_cols]
-            
-            deshabilitados_t3 = ['Numero RMA', 'Cliente', 'Producto', 'diagnostico', 'Estado del RMA', 'Resolucion']
-            
-            ed3 = st.data_editor(
-                st_df3.style.apply(estilo_filas, axis=1),
-                column_config={
-                    "id_interno": None,
-                    "Numero RMA": st.column_config.TextColumn("🔢 Nº RMA", width="small"),
-                    "comentario": st.column_config.TextColumn("💬 Comentario", width="medium"),
-                    "diagnostico": st.column_config.TextColumn("🔧 Diagnóstico", width="medium")
-                },
-                disabled=deshabilitados_t3,
-                hide_index=True,
-                use_container_width=True
-            )
-            
-            if st.form_submit_button("ACTUALIZAR COMENTARIOS HISTÓRICO"):
-                for _, r in ed3.iterrows():
-                    orig = df3[df3['id_interno'] == r['id_interno']].iloc[0]
-                    up = {k: r[k] for k in ['comentario'] if str(r[k]) != str(orig.get(k, ""))}
-                    if up: table.update(r['id_interno'], up)
-                st.cache_data.clear(); st.rerun()
+        for c in ['Compra','Ingreso','Resolucion']:

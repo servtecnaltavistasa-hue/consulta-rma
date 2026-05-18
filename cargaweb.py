@@ -1,113 +1,60 @@
-import streamlit as st
-from pyairtable import Api
-import urllib.parse
+# --- RENDERIZADO DE LA FICHA DEL CASO (VISTA CLIENTE) ---
+# (Asumiendo que 'caso' es la fila o diccionario con los datos del RMA encontrado)
 
-# --- CONFIGURACIÓN DE PÁGINA ---
-st.set_page_config(page_title="RMA ALTAVISTA SA", layout="centered")
+# 1. ENCABEZADO: Título a la izquierda, Estado a la derecha
+col_titulo, col_estado = st.columns([3, 1])
 
-# --- CREDENCIALES SEGURAS (SECRETS) ---
-# Se restauraron las llamadas originales a st.secrets utilizando las variables del entorno
-try:
-    AIRTABLE_TOKEN = st.secrets["AIRTABLE_TOKEN"]
-    BASE_ID = st.secrets["BASE_ID"]
-    TABLE_NAME = f"{st.secrets['TABLE_NAME']}"
-except Exception:
-    st.error("Error: No se encontraron las credenciales en los Secrets de Streamlit.")
-    st.stop()
+with col_titulo:
+    st.subheader(f"📋 Caso: {caso.get('Producto', 'Producto no especificado')}")
 
-api = Api(AIRTABLE_TOKEN)
-table = api.table(BASE_ID, TABLE_NAME)
+with col_estado:
+    # Lógica para determinar el color de la etiqueta según el estado
+    estado_raw = str(caso.get('Estado del RMA', "")).upper()
+    color_bg = "#6c757d" # Gris por defecto
+    color_txt = "white"
+    
+    if estado_raw in ["CAMBIO", "CREDITO"]: color_bg = "#28a745"
+    elif estado_raw in ["GARANTIA", "GARANTIA OFICIAL"]: color_bg = "#fd7e14"; color_txt = "black"
+    elif estado_raw == "NO FALLO - DEVOLVER A CLIENTE": color_bg = "#17a2b8"
+    elif estado_raw == "FUERA DE GARANTIA": color_bg = "#dc3545"
+    
+    # Renderizado alineado a la derecha usando HTML nativo
+    st.markdown(f"""
+        <div style="text-align: right; margin-top: 10px;">
+            <span style="background-color: {color_bg}; color: {color_txt}; 
+                         padding: 6px 12px; border-radius: 4px; 
+                         font-weight: bold; font-size: 14px; display: inline-block;">
+                {estado_raw if estado_raw else "EN PROCESO"}
+            </span>
+        </div>
+    """, unsafe_allow_html=True)
 
-# --- CABECERA ---
-st.markdown("<h1 style='text-align: center;'>RMA ALTAVISTA SA</h1>", unsafe_allow_html=True)
+st.write(f"**Cliente:** {caso.get('Cliente', '')}")
+st.write(f"**Fecha de Ingreso:** {formatear_para_leer(caso.get('Ingreso', ''))}")
+st.write(f"**Falla Reportada:** {caso.get('Falla', '')}")
+st.write(f"**Diagnóstico Técnico:** {caso.get('diagnostico', '')}")
 
-# --- BARRA DE BÚSQUEDA ---
-entrada_usuario = st.text_input("Ingrese Código de Cliente o Número de RMA:", value="").strip()
-busqueda = entrada_usuario.upper() 
-
-if busqueda:
-    try:
-        condicion_cliente = f"{{Cliente}} = '{busqueda}'"
-        if busqueda.isdigit():
-            condicion_rma = f"{{Numero RMA}} = {busqueda}"
-            formula = f"OR({condicion_cliente}, {condicion_rma})"
-        else:
-            formula = condicion_cliente
-        
-        results = table.all(formula=formula)
-        
-        if results:
-            numero_tel = "5493433002458"
-            mensaje_wa = urllib.parse.quote(f"Hola Altavista SA, tengo una consulta sobre el RMA/Cliente: {busqueda}")
-            link_wa = f"https://wa.me/{numero_tel}?text={mensaje_wa}"
-            
-            col_msg, col_ws = st.columns([2, 1])
-            with col_msg:
-                st.success(f"Se encontraron {len(results)} coincidencia(s):")
-            with col_ws:
-                st.markdown(f"""
-                <a href="{link_wa}" target="_blank" style="text-decoration: none;">
-                    <div style="background-color: #25D366; color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" width="18">
-                        Contactarnos
-                    </div>
-                </a>
-                """, unsafe_allow_html=True)
-
-            for index, record in enumerate(results):
-                f = record['fields']
-                estado_valor = str(f.get('Estado del RMA', '')).strip().upper()
-                diagnostico_texto = f.get('diagnostico', 'Sin diagnóstico registrado.')
-                fecha_compra = f.get('Compra', 'N/A')
-                es_fuera_garantia = "FUERA DE GARANTIA" in estado_valor
-                
-                # 1. IDENTIFICAR SI EL CASO ESTÁ FINALIZADO
-                es_finalizado = f.get('Finalizado') in [True, 1, "True", "true"]
-                
-                # 2. AGREGAR LEYENDA AL ENCABEZADO SEGÚN CORRESPONDA
-                if es_finalizado:
-                    titulo_ficha = f"Cliente: {f.get('Cliente', 'S/D')} - RMA: {f.get('Numero RMA', 'S/D')} | [CASO FINALIZADO]"
-                else:
-                    titulo_ficha = f"Cliente: {f.get('Cliente', 'S/D')} - RMA: {f.get('Numero RMA', 'S/D')} | [EN PROCESO]"
-                
-                debe_expandir = True
-                if len(results) > 2 and index > 0:
-                    debe_expandir = False
-                
-                with st.expander(titulo_ficha, expanded=debe_expandir):
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        st.markdown(f"**Producto:** {f.get('Producto', 'N/A')}")
-                        st.markdown(f"**Serial:** {f.get('serial', 'N/A')}")
-                        if es_fuera_garantia:
-                            st.markdown(f"**Compra:** :red[{fecha_compra}]")
-                        else:
-                            st.markdown(f"**Compra:** {fecha_compra}")
-                        st.markdown(f"**Ingreso:** {f.get('ingreso', 'N/A')}")
-                    
-                    with col2:
-                        aceptado_icon = "✅" if f.get('Aceptado') else "❌"
-                        st.markdown(f"**Aceptado:** {aceptado_icon}")
-                        st.markdown(f"**Estado del RMA:** {f.get('Estado del RMA', 'N/A')}")
-                        
-                        # 3. FECHA DE RESOLUCIÓN REMARCADA EN ROJO SI ESTÁ FINALIZADO
-                        if es_finalizado:
-                            st.markdown(f"**Resolución:** :red[{f.get('Resolucion', 'N/A')}]")
-                        else:
-                            st.markdown(f"**Resolución:** {f.get('Resolucion', 'N/A')}")
-                    
-                    st.markdown("---")
-                    st.markdown(f"**Diagnóstico:**")
-                    if es_fuera_garantia:
-                        st.error(diagnostico_texto)
-                    elif "NO FALLO" in estado_valor:
-                        st.warning(diagnostico_texto)
-                    else:
-                        st.info(diagnostico_texto)
-        else:
-            st.warning(f"No se encontraron resultados para '{busqueda}'.")
-            
-    except Exception as e:
-        st.error(f"Error en la consulta: {e}")
+# Formateamos la resolución para mostrarla limpia
+resolucion_texto = caso.get('Resolucion', '')
+if resolucion_texto:
+    st.write(f"**Resolución:** {formatear_para_leer(resolucion_texto)}")
 else:
-    st.info("Sistema de consulta de RMA. Ingrese sus datos para comenzar.")
+    st.write("**Resolución:** Pendiente de evaluación")
+
+# 2. COMENTARIO EXTRA: Abajo de la resolución y remarcado/subrayado
+# Limpiamos el comentario para evitar que muestre "None" en la web de consulta
+comentario_raw = caso.get('comentario', '')
+comentario_limpio = "" if str(comentario_raw).strip() in ["None", "none", "nan", "NaN", ""] else str(comentario_raw)
+
+if comentario_limpio:
+    st.markdown(f"""
+        <div style="margin-top: 15px; padding: 10px; background-color: #f8f9fa; 
+                    border-left: 4px solid #007bff; border-bottom: 1px solid #dee2e6;">
+            <span style="font-weight: bold; text-decoration: underline; color: #333;">
+                💬 Comentario adicional:
+            </span> 
+            <span style="color: #555; font-style: italic;">
+                {comentario_limpio}
+            </span>
+        </div>
+    """, unsafe_allow_html=True)

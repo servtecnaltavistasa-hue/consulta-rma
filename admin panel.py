@@ -137,7 +137,7 @@ def cargar_todos_los_datos():
 # --- 3. CARGA Y MENÚ ---
 df_all = cargar_todos_los_datos()
 
-# Esta fila de botones superiores (enlaces) queda exclusiva para administradores
+# Menú superior exclusivo de administradores
 if st.session_state.rol == "admin":
     c1, c2, c3, c4, c5 = st.columns(5)
     with c1: st.link_button("🔵 Airtable", "https://airtable.com/appjlLix1HpBwnhpS/tblNnoXdIsLFN92Mr/viwLRiCozAc4oVKZY", use_container_width=True)
@@ -157,7 +157,7 @@ if st.session_state.rol == "admin":
     with c5: st.link_button("📊 Excel Viejo", "https://docs.google.com/spreadsheets/d/17zp1kEZhVBw1Ul3HkoDZhyQ2IYthjNGS", use_container_width=True)
 
 
-# --- HERRAMIENTA DE REPORTE (ACCESIBLE PARA TODOS LOS USUARIOS: ADMIN Y COMUNES) ---
+# --- HERRAMIENTA DE REPORTE (DISPONIBLE PARA TODOS LOS ROLES) ---
 col_rep1, col_rep2 = st.columns([1, 4])
 with col_rep1:
     btn_reporte = st.button("📊 Reporte", use_container_width=True)
@@ -177,18 +177,17 @@ if st.session_state.get('mostrar_input_reporte', False):
                 
                 df_exc = df_rep[cols_sel].copy()
                 
-                # --- REPORTE: ORDENAR POR FECHA DE RESOLUCIÓN (MÁS NUEVOS ARRIBA) ---
+                # Ordenar por fecha de resolución desc
                 df_exc['Resolucion_clean'] = df_exc['Resolucion'].astype(str).str.strip().replace(["None", "none", "nan", "NaN"], "")
                 df_exc['Resolucion_dt'] = pd.to_datetime(df_exc['Resolucion_clean'], errors='coerce')
                 df_exc = df_exc.sort_values(by='Resolucion_dt', ascending=False).drop(columns=['Resolucion_dt', 'Resolucion_clean'])
 
-                # Formateamos todas las fechas para el Excel final visible
                 for f in ['Compra', 'Ingreso', 'Resolucion']:
                     df_exc[f] = df_exc[f].apply(formatear_para_leer)
 
-                # --- CONFIGURACIÓN DE ESTILOS DE XLSXWRITER ---
+                # Exportación segura compatible con versiones nuevas de Pandas
                 output = io.BytesIO()
-                with pd.ExcelWriter(output, engine='xlsxwriter', style_converter=None) as writer:
+                with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
                     df_exc.to_excel(writer, index=False, sheet_name='Reporte', startrow=2)
                     
                     workbook  = writer.book
@@ -221,24 +220,20 @@ if st.session_state.get('mostrar_input_reporte', False):
                     for col_num, header_title in enumerate(df_exc.columns):
                         worksheet.write(1, col_num, header_title, formato_encabezado)
                     
-                    # --- AUTOAJUSTE DE ANCHO Y ESCALADO SEGURO DE CELDAS ---
+                    # Autoajuste y re-escritura manual para asegurar bordes en todas las filas (incluida la última)
                     for i, col in enumerate(df_exc.columns):
                         max_len = df_exc[col].astype(str).str.len().max()
-                        
                         if pd.isna(max_len) or max_len < 0:
                             max_len = 12
-                            
                         max_len = max(int(max_len), len(col)) + 4  
                         worksheet.set_column(i, i, max_len)
                         
                         for row_idx in range(len(df_exc)):
                             val_raw = df_exc.iloc[row_idx, i]
-                            
                             if pd.isna(val_raw) or str(val_raw).strip() in ["NaT", "None", "nan", "NaN"]:
                                 val_celda = ""
                             else:
                                 val_celda = str(val_raw)
-                                
                             worksheet.write(row_idx + 2, i, val_celda, formato_celda)
                             
                     worksheet.set_row(1, 24)

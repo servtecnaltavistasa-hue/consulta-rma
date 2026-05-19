@@ -71,7 +71,6 @@ if busqueda:
                 # Procesar fechas legibles
                 fecha_compra = formatear_fecha_cliente(f.get('Compra'))
                 fecha_resolucion = formatear_fecha_cliente(f.get('Resolucion'))
-                # Se aplica el formateo correcto a la fecha de ingreso de Airtable
                 fecha_ingreso = formatear_fecha_cliente(f.get('Ingreso'))
                 
                 # Renderizado de Tarjeta de Información
@@ -81,15 +80,13 @@ if busqueda:
                     with col1:
                         st.markdown(f"**Cliente:** {f.get('Cliente', 'N/A')}")
                         st.markdown(f"**Producto:** {f.get('Producto', 'N/A')}")
-                        # CORREGIDO: 'Serial' con Mayúscula para coincidir con Airtable
                         st.markdown(f"**Serial:** {f.get('Serial', 'N/A')}")
-                        # CORREGIDO: Muestra la fecha de ingreso real de Airtable formateada
                         st.markdown(f"**Fecha de Ingreso:** {fecha_ingreso}")
                         st.markdown(f"**Fecha de Compra:** {fecha_compra}")
                         st.markdown(f"**Motivo:** {f.get('Motivo del trámite', 'N/A')}")
                     
                     with col2:
-                        aceptado_icon = "✅" if f.get('Aceptado') else \"❌\"
+                        aceptado_icon = "✅" if f.get('Aceptado') else "❌"
                         st.markdown(f"**Aceptado:** {aceptado_icon}")
                         st.markdown(f"**Estado del RMA:** {f.get('Estado del RMA', 'N/A')}")
                         

@@ -9,12 +9,11 @@ st.set_page_config(page_title="Formulario RMA - ALTAVISTA SA", layout="centered"
 # --- LIMPIEZA VISUAL EXTENSIVA (CSS) ---
 st.markdown("""
     <style>
-    /* Oculta los carteles flotantes "Press Enter to submit" e instrucciones de entrada de Streamlit */
+    /* Oculta de raíz los carteles flotantes "Press Enter to submit" de Streamlit */
     div[data-testid="stTextInput"] [data-testid="InputInstructions"],
     div[data-testid="stTextArea"] [data-testid="InputInstructions"],
     div[data-testid="stInputInstructions"],
-    .stInputInstructions,
-    small {
+    .stInputInstructions {
         display: none !important;
     }
     
@@ -23,30 +22,6 @@ st.markdown("""
         border: 1px solid rgba(49, 51, 63, 0.2);
         border-radius: 0.5rem;
         padding: 2rem;
-    }
-
-    /* Estilo personalizado y pulido para el botón nativo de WhatsApp con el logo */
-    .whatsapp-btn {
-        background-color: #25D366;
-        color: white !important;
-        padding: 10px 24px;
-        text-align: center;
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        border-radius: 8px;
-        font-weight: 500;
-        border: none;
-        font-size: 14px;
-        line-height: 1.6;
-        width: 100%;
-        height: 38px; /* Sincronizado exactamente con la altura de los botones de Streamlit */
-    }
-    .whatsapp-btn:hover {
-        background-color: #20ba5a;
-        text-decoration: none;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -78,10 +53,10 @@ with st.container(border=True):
     if st.session_state.enviado:
         st.success("¡Solicitud enviada con éxito! En breve le asignaremos su número de RMA.")
         
-        # Obtener los datos resguardados en el estado de la sesión
+        # Recuperamos la información guardada temporalmente en la sesión
         d = st.session_state.resumen_rma
         
-        # Armado estructurado del mensaje para WhatsApp
+        # Construcción exacta del mensaje requerido para enviar a la empresa
         texto_ws = (
             f"Hola ALTAVISTA SA, acabo de enviar una solicitud de RMA / DEVOLUCION:\n\n"
             f"👤 *Cliente:* {d.get('cliente', '')}\n"
@@ -92,7 +67,7 @@ with st.container(border=True):
         texto_encoded = urllib.parse.quote(texto_ws)
         link_whatsapp = f"https://wa.me/5493433002458?text={texto_encoded}"
         
-        # Distribución en dos columnas simétricas para los botones de acción final
+        # Distribución horizontal exacta de los dos botones finales
         col_btn1, col_btn2 = st.columns(2)
         
         with col_btn1:
@@ -102,15 +77,14 @@ with st.container(border=True):
                 st.rerun()
                 
         with col_btn2:
-            # Inyección limpia del enlace con el vector SVG oficial de WhatsApp
-            st.markdown(f"""
-                <a href="{link_whatsapp}" target="_blank" class="whatsapp-btn">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12.004 2c-5.51 0-9.99 4.49-9.99 10 0 1.91.54 3.7 1.48 5.24l-1.4 5.1 5.23-1.37c1.48.81 3.16 1.27 4.93 1.27 5.51 0 10-4.49 10-10s-4.49-10-10-10zm4.87 14.15c-.21.58-1.22 1.13-1.68 1.19-.46.06-.91.08-2.84-.68-2.47-.97-4.05-3.48-4.17-3.64-.12-.17-1.04-1.38-1.04-2.63 0-1.25.65-1.87.88-2.12.23-.25.5-.31.67-.31.17 0 .33.01.48.01.16.01.37-.06.57.42.21.5.73 1.77.79 1.9.06.12.1.27.02.44-.08.16-.12.27-.25.42-.12.15-.26.33-.37.45-.12.12-.25.26-.11.5.15.24.66 1.09 1.42 1.76.98.86 1.8 1.13 2.06 1.25.25.13.4.1.55-.07.15-.17.65-.75.82-.1.17.15.34.42.92.71.58.29 3.46 1.71 3.54 1.75.08.04.13.19.05.42z"/>
-                    </svg>
-                    Contactanos
-                </a>
-                """, unsafe_allow_html=True)
+            # Botón de enlace nativo de Streamlit usando el icono de teléfono/bocadillo que simula WhatsApp
+            st.link_button(
+                label="Contactanos",
+                url=link_whatsapp,
+                icon="💬",
+                type="primary",
+                use_container_width=True
+            )
             
     else:
         # FILA 1: Cliente y Serial
@@ -118,4 +92,86 @@ with st.container(border=True):
         with fila1_col1:
             cliente = st.text_input("Nombre / Razón Social", placeholder="Ej: Juan Pérez o Empresa S.A.").upper()
         with fila1_col2:
-            serial = st.text_input("Serial (SN - ASA)", placeholder="U
+            serial = st.text_input("Serial (SN - ASA)", placeholder="Ubicado en la etiqueta")
+
+        # FILA 2: Producto y Fecha de Compra
+        fila2_col1, fila2_col2 = st.columns(2)
+        with fila2_col1:
+            producto = st.text_input("Producto", placeholder="Ingrese nombre de producto")
+        with fila2_col2:
+            fecha_compra = st.date_input(
+                "Fecha de Compra", 
+                max_value=date.today(), 
+                format="DD/MM/YYYY"
+            )
+
+        # DETALLES DEL TRÁMITE
+        motivo = st.selectbox(
+            "Motivo del trámite",
+            options=["Seleccione una opción", "RMA", "Devolución"]
+        )
+        
+        descripcion = st.text_area("Descripción detallada", placeholder="Describa el motivo o la falla...")
+
+        st.markdown("---")
+        st.markdown("### Método de Contacto")
+        
+        opcion_contacto = st.radio(
+            "¿Cómo prefiere que nos contactemos?",
+            options=["WhatsApp", "Correo Electrónico"],
+            horizontal=True
+        )
+
+        telefono_val = ""
+        email_val = ""
+
+        if opcion_contacto == "WhatsApp":
+            telefono_val = st.text_input("Número de WhatsApp", placeholder="Ej: +5493433002458")
+        else:
+            email_val = st.text_input("Dirección de Correo Electrónico", placeholder="Ej: ejemplo@correo.com")
+
+        st.markdown("---")
+        
+        enviar = st.button("ENVIAR SOLICITUD", type="primary", use_container_width=True)
+
+        if enviar:
+            # Validación inteligente: discrimina según cuál esté seleccionado en pantalla
+            contacto_lleno = False
+            if opcion_contacto == "WhatsApp" and telefono_val.strip() != "":
+                contacto_lleno = True
+            elif opcion_contacto == "Correo Electrónico" and email_val.strip() != "":
+                contacto_lleno = True
+            
+            if not cliente or not producto or not serial or motivo == "Seleccione una opción" or not contacto_lleno:
+                st.error("Por favor, complete todos los campos obligatorios para procesar la solicitud.")
+            else:
+                with st.spinner("Procesando..."):
+                    try:
+                        # Almacenamos temporalmente en caché para el botón final de WhatsApp
+                        st.session_state.resumen_rma = {
+                            "cliente": cliente,
+                            "producto": producto,
+                            "serial": serial,
+                            "falla": descripcion
+                        }
+                        
+                        nuevo_registro = {
+                            "Cliente": cliente,
+                            "Producto": producto,
+                            "Serial": serial,
+                            "Compra": str(fecha_compra),
+                            "Motivo del trámite": motivo, 
+                            "Falla": descripcion,        
+                            "diagnostico": "",           
+                            "Telefono": telefono_val,      
+                            "Email": email_val,            
+                            "Estado del RMA": "PENDIENTE",
+                            "Ingreso": str(date.today())
+                        }
+                        
+                        table.create(nuevo_registro)
+                        st.session_state.enviado = True
+                        st.rerun()
+                        
+                    except Exception as e:
+                        st.error(f"Error al conectar con Airtable: {e}")

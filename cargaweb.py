@@ -6,7 +6,7 @@ from datetime import datetime
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="RMA ALTAVISTA SA", layout="centered")
 
-# --- CSS PARA ELIMINAR EL CARTEL "PRESS ENTER TO APPLY" ---
+# --- CSS PARA ELIMINAR EL CARTEL "PRESS ENTER TO APPLY" --
 st.markdown("""
     <style>
         /* Oculta la leyenda de 'Press Enter to apply' en los inputs de texto */
@@ -42,15 +42,15 @@ def formatear_fecha_cliente(fecha_raw):
 
 # --- INTERFAZ DE USUARIO ---
 st.markdown("<h1 style='text-align: center;'>Consulta de Estado de RMA</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center;'>Ingrese el número de serie de su producto para verificar el estado de su trámite.</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center;'>Ingrese su Número de Caso o Nombre de Cliente para verificar el estado del trámite.</p>", unsafe_allow_html=True)
 st.markdown("---")
 
-busqueda = st.text_input("Número de Serie o Cliente:", placeholder="Ej: SN-ASA12345...").strip()
+busqueda = st.text_input("Número de Caso o Cliente:", placeholder="Ej: 145 o Juan Pérez...").strip()
 
 if busqueda:
     try:
-        # Consulta en Airtable buscando coincidencia en Serial o Cliente
-        formula = f"OR(FIND('{busqueda}', {{Serial}}), FIND('{busqueda}', {{Cliente}}))"
+        # CORREGIDO: Busca usando el nuevo campo de texto plano "Numero RMA texto" o el campo "Cliente"
+        formula = f"OR(FIND('{busqueda}', {{Numero RMA texto}}), FIND('{busqueda}', {{Cliente}}))"
         resultados = table.all(formula=formula)
         
         if resultados:
@@ -71,17 +71,19 @@ if busqueda:
                 # Procesar fechas legibles
                 fecha_compra = formatear_fecha_cliente(f.get('Compra'))
                 fecha_resolucion = formatear_fecha_cliente(f.get('Resolucion'))
-                # Se extrae del campo correcto 'Ingreso' y se le aplica el formato DD/MM/YYYY
                 fecha_ingreso = formatear_fecha_cliente(f.get('Ingreso'))
                 
                 # Renderizado de Tarjeta de Información
                 with st.container(border=True):
+                    # Mostramos el número de caso usando el campo de texto formateado de Airtable
+                    num_caso = f.get('Numero RMA texto', 'N/A')
+                    st.markdown(f"### 🔢 Caso Nº RMA: {num_caso}")
+                    
                     col1, col2 = st.columns(2)
                     
                     with col1:
                         st.markdown(f"**Cliente:** {f.get('Cliente', 'N/A')}")
                         st.markdown(f"**Producto:** {f.get('Producto', 'N/A')}")
-                        # Se extrae del campo correcto 'Serial'
                         st.markdown(f"**Serial:** {f.get('Serial', 'N/A')}")
                         st.markdown(f"**Fecha de Ingreso:** {fecha_ingreso}")
                         st.markdown(f"**Fecha de Compra:** {fecha_compra}")

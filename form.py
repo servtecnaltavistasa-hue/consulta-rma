@@ -24,7 +24,7 @@ st.markdown("""
         padding: 2rem;
     }
 
-    /* Estilo personalizado para el botón de WhatsApp (Simula el diseño nativo primary de Streamlit) */
+    /* Estilo personalizado para el botón de WhatsApp (Simula perfectamente el diseño nativo primary de Streamlit) */
     .btn-whatsapp-custom {
         background-color: #25D366;
         color: white !important;
@@ -87,7 +87,7 @@ with st.container(border=True):
         # Recuperamos la información guardada temporalmente en la sesión
         d = st.session_state.resumen_rma
         
-        # Mensaje limpio usando " - " en vez de iconos para prevenir fallos de codificación de URL
+        # Mensaje limpio con " - " en reemplazo de los iconos para evitar errores de renderizado
         texto_ws = (
             f"Hola ALTAVISTA SA, acabo de enviar una solicitud de RMA / DEVOLUCION:\n\n"
             f"- *Cliente:* {d.get('cliente', '')}\n"
@@ -96,9 +96,9 @@ with st.container(border=True):
             f"- *Falla:* {d.get('falla', '')}"
         )
         texto_encoded = urllib.parse.quote(texto_ws)
-        link_whatsapp = f"https://wa.me/3433002458?text={texto_encoded}"
+        link_whatsapp = f"https://wa.me/5493433002458?text={texto_encoded}"
         
-        # Distribución horizontal simétrica de los dos botones de acción finales
+        # Distribución horizontal de los dos botones de acción finales
         col_btn1, col_btn2 = st.columns(2)
         
         with col_btn1:
@@ -108,7 +108,7 @@ with st.container(border=True):
                 st.rerun()
                 
         with col_btn2:
-            # Botón HTML con el logo pequeño SVG oficial de WhatsApp y la leyenda Contactanos
+            # Inyección del botón HTML personalizado con el logo pequeño SVG oficial de WhatsApp y texto requerido
             st.markdown(f"""
                 <a href="{link_whatsapp}" target="_blank" class="btn-whatsapp-custom">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
@@ -136,7 +136,6 @@ with st.container(border=True):
                 max_value=date.today(), 
                 format="DD/MM/YYYY"
             )
-            st.caption("Dejar valor predeterminado si no recuerda")
 
         # DETALLES DEL TRÁMITE
         motivo = st.selectbox(
@@ -144,8 +143,7 @@ with st.container(border=True):
             options=["Seleccione una opción", "RMA", "Devolución"]
         )
         
-        # Cambiado el texto identificador a "Descripción de la falla"
-        descripcion = st.text_area("Descripción de la falla", placeholder="Describa el motivo o la falla...")
+        descripcion = st.text_area("Descripción detallada", placeholder="Describa el motivo o la falla...")
 
         st.markdown("---")
         st.markdown("### Método de Contacto")
@@ -160,15 +158,16 @@ with st.container(border=True):
         email_val = ""
 
         if opcion_contacto == "WhatsApp":
-            telefono_val = st.text_input("Número de WhatsApp", placeholder="Ej: 549343...")
+            telefono_val = st.text_input("Número de WhatsApp", placeholder="Ej: +5493433002458")
         else:
-            email_val = st.text_input("Dirección de Correo Electrónico", placeholder="ejemplo@correo.com")
+            email_val = st.text_input("Dirección de Correo Electrónico", placeholder="Ej: ejemplo@correo.com")
 
         st.markdown("---")
         
         enviar = st.button("ENVIAR SOLICITUD", type="primary", use_container_width=True)
 
         if enviar:
+            # Validación de campo dinámico activo
             contacto_lleno = False
             if opcion_contacto == "WhatsApp" and telefono_val.strip() != "":
                 contacto_lleno = True
@@ -180,7 +179,7 @@ with st.container(border=True):
             else:
                 with st.spinner("Procesando..."):
                     try:
-                        # Resguardamos temporalmente en la sesión para pasarlo a la URL de WhatsApp
+                        # Almacenamos temporalmente en caché para armar el texto final
                         st.session_state.resumen_rma = {
                             "cliente": cliente,
                             "producto": producto,
@@ -194,8 +193,8 @@ with st.container(border=True):
                             "Serial": serial,
                             "Compra": str(fecha_compra),
                             "Motivo del trámite": motivo, 
-                            "Falla": descripcion,        # Forzado al campo Falla de tu Airtable
-                            "diagnostico": "",           # Se inicializa vacío para evitar superposiciones
+                            "Falla": descripcion,        
+                            "diagnostico": "",           
                             "Telefono": telefono_val,      
                             "Email": email_val,            
                             "Estado del RMA": "PENDIENTE",

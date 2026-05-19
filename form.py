@@ -6,7 +6,7 @@ import urllib.parse
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="Formulario RMA - ALTAVISTA SA", layout="centered")
 
-# --- LIMPIEZA VISUAL EXTENSIVA (CSS) ---
+# --- LIMPIEZA VISUAL EXTENSIVA Y ESTILOS PARA EL BOTÓN DE WHATSAPP ---
 st.markdown("""
     <style>
     /* Oculta de raíz los carteles flotantes "Press Enter to submit" de Streamlit */
@@ -22,6 +22,37 @@ st.markdown("""
         border: 1px solid rgba(49, 51, 63, 0.2);
         border-radius: 0.5rem;
         padding: 2rem;
+    }
+
+    /* Estilo personalizado para el botón de WhatsApp (Simula perfectamente el diseño nativo primary de Streamlit) */
+    .btn-whatsapp-custom {
+        background-color: #25D366;
+        color: white !important;
+        border: 1px solid #25D366;
+        padding: 0px 16px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        border-radius: 8px;
+        font-weight: 400;
+        font-size: 14px;
+        font-family: inherit;
+        width: 100%;
+        height: 38px; /* Altura exacta del st.button estándar de Streamlit */
+        box-sizing: border-box;
+        cursor: pointer;
+        transition: background-color 0.16s ease 0s, border-color 0.16s ease 0s;
+    }
+    .btn-whatsapp-custom:hover {
+        background-color: #20ba5a;
+        border-color: #20ba5a;
+        text-decoration: none;
+    }
+    .btn-whatsapp-custom svg {
+        flex-shrink: 0;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -56,18 +87,18 @@ with st.container(border=True):
         # Recuperamos la información guardada temporalmente en la sesión
         d = st.session_state.resumen_rma
         
-        # Construcción exacta del mensaje requerido para enviar a la empresa
+        # Mensaje limpio con " - " en reemplazo de los iconos para evitar errores de renderizado
         texto_ws = (
             f"Hola ALTAVISTA SA, acabo de enviar una solicitud de RMA / DEVOLUCION:\n\n"
-            f"👤 *Cliente:* {d.get('cliente', '')}\n"
-            f"📦 *Producto:* {d.get('producto', '')}\n"
-            f"🔢 *Serial:* {d.get('serial', '')}\n"
-            f"⚠️ *Falla:* {d.get('falla', '')}"
+            f"- *Cliente:* {d.get('cliente', '')}\n"
+            f"- *Producto:* {d.get('producto', '')}\n"
+            f"- *Serial:* {d.get('serial', '')}\n"
+            f"- *Falla:* {d.get('falla', '')}"
         )
         texto_encoded = urllib.parse.quote(texto_ws)
         link_whatsapp = f"https://wa.me/5493433002458?text={texto_encoded}"
         
-        # Distribución horizontal exacta de los dos botones finales
+        # Distribución horizontal de los dos botones de acción finales
         col_btn1, col_btn2 = st.columns(2)
         
         with col_btn1:
@@ -77,14 +108,15 @@ with st.container(border=True):
                 st.rerun()
                 
         with col_btn2:
-            # Botón de enlace nativo de Streamlit usando el icono de teléfono/bocadillo que simula WhatsApp
-            st.link_button(
-                label="Contactanos",
-                url=link_whatsapp,
-                icon="💬",
-                type="primary",
-                use_container_width=True
-            )
+            # Inyección del botón HTML personalizado con el logo pequeño SVG oficial de WhatsApp y texto requerido
+            st.markdown(f"""
+                <a href="{link_whatsapp}" target="_blank" class="btn-whatsapp-custom">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12.004 2c-5.51 0-9.99 4.49-9.99 10 0 1.91.54 3.7 1.48 5.24l-1.4 5.1 5.23-1.37c1.48.81 3.16 1.27 4.93 1.27 5.51 0 10-4.49 10-10s-4.49-10-10-10zm4.87 14.15c-.21.58-1.22 1.13-1.68 1.19-.46.06-.91.08-2.84-.68-2.47-.97-4.05-3.48-4.17-3.64-.12-.17-1.04-1.38-1.04-2.63 0-1.25.65-1.87.88-2.12.23-.25.5-.31.67-.31.17 0 .33.01.48.01.16.01.37-.06.57.42.21.5.73 1.77.79 1.9.06.12.1.27.02.44-.08.16-.12.27-.25.42-.12.15-.26.33-.37.45-.12.12-.25.26-.11.5.15.24.66 1.09 1.42 1.76.98.86 1.8 1.13 2.06 1.25.25.13.4.1.55-.07.15-.17.65-.75.82-.1.17.15.34.42.92.71.58.29 3.46 1.71 3.54 1.75.08.04.13.19.05.42z"/>
+                    </svg>
+                    Contactanos
+                </a>
+                """, unsafe_allow_html=True)
             
     else:
         # FILA 1: Cliente y Serial
@@ -135,7 +167,7 @@ with st.container(border=True):
         enviar = st.button("ENVIAR SOLICITUD", type="primary", use_container_width=True)
 
         if enviar:
-            # Validación inteligente: discrimina según cuál esté seleccionado en pantalla
+            # Validación de campo dinámico activo
             contacto_lleno = False
             if opcion_contacto == "WhatsApp" and telefono_val.strip() != "":
                 contacto_lleno = True
@@ -147,7 +179,7 @@ with st.container(border=True):
             else:
                 with st.spinner("Procesando..."):
                     try:
-                        # Almacenamos temporalmente en caché para el botón final de WhatsApp
+                        # Almacenamos temporalmente en caché para armar el texto final
                         st.session_state.resumen_rma = {
                             "cliente": cliente,
                             "producto": producto,

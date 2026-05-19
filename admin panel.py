@@ -7,33 +7,26 @@ import io
 # --- 1. CONFIGURACIÓN ---
 st.set_page_config(page_title="Panel RMA", layout="wide")
 
-# CSS para ensanchar la app al 100% y dar un diseño limpio
 st.markdown("""
     <style>
-        /* --- FUERZA EL ANCHO COMPLETO DE LA PÁGINA (SACA LOS BORDES LATERALES) --- */
         .block-container {
             max-width: 100% !important;
             padding-left: 2rem !important;
             padding-right: 2rem !important;
             padding-top: 4rem;
         }
-        
         div[data-testid="stExpander"] { border: 1px solid #444; margin-bottom: 1rem; }
-        
         [data-testid="stDataEditor"] div, .stDataTable td {
             border-bottom: 4px solid #000 !important;
         }
-        
         .stDataTable td, .stDataTable th, [data-testid="stDataEditor"] * {
             font-family: sans-serif !important;
             font-size: 14px !important;
             font-weight: 400 !important;
         }
-
         .stDataTable td, .stDataTable th {
             border-right: 1px solid #444 !important;
         }
-
         div[data-testid="stGridVirtualizingContainer"] div {
             --background-color: transparent !important;
         }
@@ -43,8 +36,6 @@ st.markdown("""
             background-color: inherit !important;
             color: inherit !important;
         }
-
-        /* --- ESTILOS PARA EL MENÚ DESPLEGABLE HTML REAL --- */
         .menu-dropdown {
             position: relative;
             display: inline-block;
@@ -91,7 +82,6 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 1B. SISTEMA DE AUTENTICACIÓN SEGURO (SECRETS) ---
 if "autenticado" not in st.session_state:
     st.session_state.autenticado = False
     st.session_state.usuario = ""
@@ -107,7 +97,6 @@ def login():
         if bot_login:
             try:
                 usuarios_secretos = st.secrets["USUARIOS"]
-                
                 if usuario in usuarios_secretos and usuarios_secretos[usuario] == clave:
                     st.session_state.autenticado = True
                     st.session_state.usuario = usuario
@@ -123,15 +112,19 @@ if not st.session_state.autenticado:
     login()
     st.stop()
 
-# --- BARRA LATERAL ---
+# --- BARRA LATERAL CONFIGURADA CON EL NUEVO BOTÓN DE ACTUALIZAR ---
 st.sidebar.write(f"Conectado como: **{st.session_state.usuario}** ({st.session_state.rol.upper()})")
-if st.sidebar.button("Cerrar Sesión"):
+
+if st.sidebar.button("🔄 Actualizar Datos", use_container_width=True):
+    st.cache_data.clear()
+    st.rerun()
+
+if st.sidebar.button("Cerrar Sesión", type="secondary", use_container_width=True):
     st.session_state.autenticado = False
     st.session_state.usuario = ""
     st.session_state.rol = ""
     st.rerun()
 
-# --- CONEXIÓN A AIRTABLE ---
 try:
     AIRTABLE_TOKEN = st.secrets["AIRTABLE_TOKEN"]
     BASE_ID = st.secrets["BASE_ID"]
@@ -142,7 +135,6 @@ except Exception as e:
     st.error(f"Error en credenciales: {e}")
     st.stop()
 
-# --- 2. FUNCIONES DE APOYO ---
 def estilo_filas(row):
     estado = str(row.get('Estado del RMA', "")).upper()
     verde, naranja, celeste, rojo, gris = 'background-color: #28a745; color: white;', 'background-color: #fd7e14; color: black;', 'background-color: #17a2b8; color: white;', 'background-color: #dc3545; color: white;', 'background-color: #6c757d; color: white;'
@@ -186,16 +178,13 @@ def cargar_todos_los_datos():
         rows.append(fields)
     return pd.DataFrame(rows)
 
-# --- 3. CARGA Y MENÚ ---
 df_all = cargar_todos_los_datos()
 
-# --- MENÚ SUPERIOR DE ACCESOS DIRECTOS ---
 if st.session_state.rol == "admin":
     c1, c2, c3, c4, c5 = st.columns(5)
     with c1: st.link_button("🔵 Airtable", "https://airtable.com/appjlLix1HpBwnhpS/tblNnoXdIsLFN92Mr/viwLRiCozAc4oVKZY", use_container_width=True)
     with c2: st.link_button("💻 Github", "https://github.com/FedeASA/consulta-rma", use_container_width=True)
     with c3: st.link_button("📝 Texto Clientes", "https://docs.google.com/document/d/1URgFPuVsIoR6LX2diAwFR5rWRKYvmmEwvQ7VXuxSnYg", use_container_width=True)
-    
     with c4:
         st.markdown("""
             <div class="menu-dropdown">
@@ -207,11 +196,8 @@ if st.session_state.rol == "admin":
                 </div>
             </div>
         """, unsafe_allow_html=True)
-
     with c5: st.link_button("📊 Excel Viejo", "https://docs.google.com/spreadsheets/d/17zp1kEZhVBw1Ul3HkoDZhyQ2IYthjNGS", use_container_width=True)
 
-
-# --- HERRAMIENTA DE REPORTE ---
 col_rep1, col_rep2 = st.columns([1, 4])
 with col_rep1:
     btn_reporte = st.button("📊 Reporte", use_container_width=True)
@@ -230,8 +216,6 @@ if st.session_state.get('mostrar_input_reporte', False):
                     if c not in df_rep.columns: df_rep[c] = ""
                 
                 df_exc = df_rep[cols_sel].copy()
-                
-                # Ordenar por fecha desc
                 df_exc['Resolucion_clean'] = df_exc['Resolucion'].astype(str).str.strip().replace(["None", "none", "nan", "NaN"], "")
                 df_exc['Resolucion_dt'] = pd.to_datetime(df_exc['Resolucion_clean'], errors='coerce')
                 df_exc = df_exc.sort_values(by='Resolucion_dt', ascending=False).drop(columns=['Resolucion_dt', 'Resolucion_clean'])
@@ -239,11 +223,9 @@ if st.session_state.get('mostrar_input_reporte', False):
                 for f in ['Compra', 'Ingreso', 'Resolucion']:
                     df_exc[f] = df_exc[f].apply(formatear_para_leer)
 
-                # Exportación limpia corregida sin el parámetro obsoleto style_converter
                 output = io.BytesIO()
                 with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
                     df_exc.to_excel(writer, index=False, sheet_name='Reporte', startrow=2)
-                    
                     workbook  = writer.book
                     worksheet = writer.sheets['Reporte']
                     
@@ -263,18 +245,14 @@ if st.session_state.get('mostrar_input_reporte', False):
                     for col_num, header_title in enumerate(df_exc.columns):
                         worksheet.write(1, col_num, header_title, formato_encabezado)
                     
-                    # Saneamiento manual iterativo de celdas para prevenir fallas de tipo de dato
                     for i, col in enumerate(df_exc.columns):
                         max_len = len(col)
                         for row_idx in range(len(df_exc)):
                             val_raw = df_exc.iloc[row_idx, i]
                             val_celda = "" if pd.isna(val_raw) or str(val_raw).strip() in ["NaT", "None", "nan", "NaN"] else str(val_raw)
-                            
                             if len(val_celda) > max_len:
                                 max_len = len(val_celda)
-                                
                             worksheet.write(row_idx + 2, i, val_celda, formato_celda)
-                        
                         worksheet.set_column(i, i, max_len + 4)
                             
                     worksheet.set_row(1, 24)
@@ -293,7 +271,6 @@ if df_all.empty:
     st.warning("No hay datos para mostrar.")
     st.stop()
 
-# --- SANEAMIENTO SEGURO DE COLUMNAS ---
 columnas_requeridas = ['Aceptado', 'Finalizado', 'Ingreso', 'Resolucion', 'diagnostico', 'Estado del RMA', 'Compra', 'Producto', 'comentario', 'Falla', 'Serial', 'autonumero']
 for col in columnas_requeridas:
     if col not in df_all.columns: 

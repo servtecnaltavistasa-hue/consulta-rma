@@ -87,7 +87,7 @@ with st.container(border=True):
         # Recuperamos la información guardada temporalmente en la sesión
         d = st.session_state.resumen_rma
         
-        # Mensaje limpio con " - " en reemplazo de los iconos para evitar errores de renderizado
+        # Mensaje limpio con " - " para evitar errores de renderizado en WhatsApp
         texto_ws = (
             f"Hola ALTAVISTA SA, acabo de enviar una solicitud de RMA / DEVOLUCION:\n\n"
             f"- *Cliente:* {d.get('cliente', '')}\n"
@@ -108,7 +108,7 @@ with st.container(border=True):
                 st.rerun()
                 
         with col_btn2:
-            # Inyección del botón HTML personalizado con el logo pequeño SVG oficial de WhatsApp y texto requerido
+            # Botón HTML con el logo pequeño SVG oficial de WhatsApp y la leyenda Contactanos
             st.markdown(f"""
                 <a href="{link_whatsapp}" target="_blank" class="btn-whatsapp-custom">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
@@ -129,3 +129,82 @@ with st.container(border=True):
         # FILA 2: Producto y Fecha de Compra
         fila2_col1, fila2_col2 = st.columns(2)
         with fila2_col1:
+            producto = st.text_input("Producto", placeholder="Ingrese nombre de producto")
+        with fila2_col2:
+            fecha_compra = st.date_input(
+                "Fecha de Compra", 
+                max_value=date.today(), 
+                format="DD/MM/YYYY"
+            )
+
+        # DETALLES DEL TRÁMITE
+        motivo = st.selectbox(
+            "Motivo del trámite",
+            options=["Seleccione una opción", "RMA", "Devolución"]
+        )
+        
+        # Corregido a "Descripción de la falla"
+        descripcion = st.text_area("Descripción de la falla", placeholder="Describa el motivo o la falla...")
+
+        st.markdown("---")
+        st.markdown("### Método de Contacto")
+        
+        opcion_contacto = st.radio(
+            "¿Cómo prefiere que nos contactemos?",
+            options=["WhatsApp", "Correo Electrónico"],
+            horizontal=True
+        )
+
+        telefono_val = ""
+        email_val = ""
+
+        if opcion_contacto == "WhatsApp":
+            telefono_val = st.text_input("Número de WhatsApp", placeholder="Ej: +5493433002458")
+        else:
+            email_val = st.text_input("Dirección de Correo Electrónico", placeholder="Ej: correo@prueba.com")
+
+        st.markdown("---")
+        
+        enviar = st.button("ENVIAR SOLICITUD", type="primary", use_container_width=True)
+
+        if enviar:
+            # Validación correcta según la opción que esté seleccionada en el radio button
+            contacto_lleno = False
+            if opcion_contacto == "WhatsApp" and telefono_val.strip() != "":
+                contacto_lleno = True
+            elif opcion_contacto == "Correo Electrónico" and email_val.strip() != "":
+                contacto_lleno = True
+            
+            if not cliente or not producto or not serial or motivo == "Seleccione una opción" or not contacto_lleno:
+                st.error("Por favor, complete todos los campos obligatorios para procesar la solicitud.")
+            else:
+                with st.spinner("Procesando..."):
+                    try:
+                        # Guardado en caché interna
+                        st.session_state.resumen_rma = {
+                            "cliente": cliente,
+                            "producto": producto,
+                            "serial": serial,
+                            "falla": descripcion
+                        }
+                        
+                        nuevo_registro = {
+                            "Cliente": cliente,
+                            "Producto": producto,
+                            "Serial": serial,
+                            "Compra": str(fecha_compra),
+                            "Motivo del trámite": motivo, 
+                            "Falla": descripcion,        # Forzado estrictamente a la columna Falla
+                            "diagnostico": "",           # Se inicializa vacío para el panel de administración
+                            "Telefono": telefono_val,      
+                            "Email": email_val,            
+                            "Estado del RMA": "PENDIENTE",
+                            "Ingreso": str(date.today())
+                        }
+                        
+                        table.create(nuevo_registro)
+                        st.session_state.enviado = True
+                        st.rerun()
+                        
+                    except Exception as e:
+                        st.error(f"Error al conectar con Airtable: {e}")

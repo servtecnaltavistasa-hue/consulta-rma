@@ -138,10 +138,10 @@ with st.container(border=True):
             # Texto aclaratorio en formato comentario justo abajo del cuadro
             st.markdown("<div style='color: #888888; font-size: 14px; margin-top: -10px; margin-bottom: 15px;'># Dejar fecha actual si no recuerda</div>", unsafe_allow_html=True)
 
-        # DETALLES DEL TRÁMITE
+        # DETALLES DEL TRÁMITE (CORREGIDO: Solo se muestran RMA y Devolución)
         motivo = st.selectbox(
             "Motivo del trámite",
-            options=["Seleccione una opción", "RMA", "Devolución"]
+            options=["RMA", "Devolución"]
         )
         
         descripcion = st.text_area("Descripción de la falla", placeholder="Especifique el error / falla detalladamente...")
@@ -174,7 +174,7 @@ with st.container(border=True):
             elif opcion_contacto == "Correo Electrónico" and email_val.strip() != "":
                 contacto_lleno = True
             
-            if not cliente or not producto or not serial or motivo == "Seleccione una opción" or not contacto_lleno:
+            if not cliente or not producto or not serial or not contacto_lleno:
                 st.error("Por favor, complete todos los campos obligatorios para procesar la solicitud.")
             else:
                 with st.spinner("Procesando..."):

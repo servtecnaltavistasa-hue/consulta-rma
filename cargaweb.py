@@ -123,3 +123,61 @@ if busqueda:
             for index, record in enumerate(resultados_ordenados):
                 f = record['fields']
                 estado_valor = str(f.get('Estado del RMA', '')).strip().upper()
+                diagnostico_texto = f.get('diagnostico', 'Sin diagnóstico registrado.')
+                es_fuera_garantia = "FUERA DE GARANTIA" in estado_valor
+                
+                # Formatear las fechas a DD/MM/YYYY
+                fecha_compra = formatear_fecha_cliente(f.get('Compra'))
+                fecha_resolucion = formatear_fecha_cliente(f.get('Resolucion'))
+                
+                es_finalizado = f.get('Finalizado') in [True, 1, "True", "true"]
+                
+                if es_finalizado:
+                    titulo_ficha = f"Cliente: {f.get('Cliente', 'S/D')} - RMA: {f.get('Numero RMA', 'S/D')} | [CASO FINALIZADO]"
+                else:
+                    titulo_ficha = f"Cliente: {f.get('Cliente', 'S/D')} - RMA: {f.get('Numero RMA', 'S/D')} | [EN PROCESO]"
+                
+                debe_expandir = True
+                if len(resultados_ordenados) > 2 and index > 0:
+                    debe_expandir = False
+                
+                with st.expander(titulo_ficha, expanded=debe_expandir):
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.markdown(f"**Producto:** {f.get('Producto', 'N/A')}")
+                        st.markdown(f"**Serial:** {f.get('serial', 'N/A')}")
+                        if es_fuera_garantia:
+                            st.markdown(f"**Compra:** :red[{fecha_compra}]")
+                        else:
+                            st.markdown(f"**Compra:** {fecha_compra}")
+                        st.markdown(f"**Ingreso:** {f.get('ingreso', 'N/A')}")
+                    
+                    with col2:
+                        aceptado_icon = "✅" if f.get('Aceptado') else "❌"
+                        st.markdown(f"**Aceptado:** {aceptado_icon}")
+                        st.markdown(f"**Estado del RMA:** {f.get('Estado del RMA', 'N/A')}")
+                        
+                        if es_finalizado:
+                            st.markdown(f"**Resolución:** :red[{fecha_resolucion}]")
+                        else:
+                            st.markdown(f"**Resolución:** {fecha_resolucion}")
+                        
+                        comentario_texto = f.get('comentario', '')
+                        if comentario_texto and str(comentario_texto).strip() not in ["None", "none", "nan", "NaN", ""]:
+                            st.markdown(f"**Comentario:** {comentario_texto}")
+                    
+                    st.markdown("---")
+                    st.markdown(f"**Diagnóstico:**")
+                    if es_fuera_garantia:
+                        st.error(diagnostico_texto)
+                    elif "NO FALLO" in estado_valor:
+                        st.warning(diagnostico_texto)
+                    else:
+                        st.info(diagnostico_texto)
+        else:
+            st.warning(f"No se encontraron resultados para '{busqueda}'.")
+            
+    except Exception as e:
+        st.error(f"Error en la consulta: {e}")
+else:
+    st.info("Sistema de consulta de RMA. Ingrese sus datos para comenzar.")

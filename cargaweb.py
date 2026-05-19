@@ -145,12 +145,12 @@ if busqueda:
                     col1, col2 = st.columns(2)
                     with col1:
                         st.markdown(f"**Producto:** {f.get('Producto', 'N/A')}")
-                        st.markdown(f"**Serial:** {f.get('serial', 'N/A')}")
+                        st.markdown(f"**Serial:** {f.get('Serial', 'N/A')}")
                         if es_fuera_garantia:
                             st.markdown(f"**Compra:** :red[{fecha_compra}]")
                         else:
                             st.markdown(f"**Compra:** {fecha_compra}")
-                        st.markdown(f"**Ingreso:** {f.get('ingreso', 'N/A')}")
+                        st.markdown(f"**Ingreso:** {f.get('Ingreso', 'N/A')}")
                     
                     with col2:
                         aceptado_icon = "✅" if f.get('Aceptado') else "❌"

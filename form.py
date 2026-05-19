@@ -143,7 +143,7 @@ with st.container(border=True):
             options=["Seleccione una opción", "RMA", "Devolución"]
         )
         
-        descripcion = st.text_area("Descripción detallada", placeholder="Describa el motivo o la falla...")
+        descripcion = st.text_area("Descripción de la falla", placeholder="Especifique el error / falla detalladamente...")
 
         st.markdown("---")
         st.markdown("### Método de Contacto")

@@ -6,7 +6,7 @@ from datetime import datetime
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="RMA ALTAVISTA SA", layout="centered")
 
-# --- CSS PARA ELIMINAR EL CARTEL "PRESS ENTER TO APPLY" --
+# --- CSS PARA ELIMINAR EL CARTEL "PRESS ENTER TO APPLY" ---
 st.markdown("""
     <style>
         /* Oculta la leyenda de 'Press Enter to apply' en los inputs de texto */
@@ -34,60 +34,123 @@ def formatear_fecha_cliente(fecha_raw):
     """Convierte fechas YYYY-MM-DD de Airtable a formato legible DD/MM/YYYY"""
     if not fecha_raw or str(fecha_raw).strip() in ["None", "none", "nan", "NaN", ""]: 
         return "N/A"
-    try:
-        dt = datetime.strptime(str(fecha_raw).strip(), "%Y-%m-%d")
-        return dt.strftime("%d/%m/%Y")
-    except ValueError:
-        return str(fecha_raw)
+    
+    fecha_str = str(fecha_raw).replace('-', '/').strip()
+    for formato in ['%Y/%m/%d', '%Y-%m-%d', '%d/%m/%Y']:
+        try:
+            dt = datetime.strptime(fecha_str, formato)
+            return dt.strftime('%d/%m/%Y')
+        except ValueError:
+            continue
+    return str(fecha_raw)
 
-# --- INTERFAZ DE USUARIO ---
-st.markdown("<h1 style='text-align: center;'>Consulta de Estado de RMA</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center;'>Ingrese su Número de Caso o Nombre de Cliente para verificar el estado del trámite.</p>", unsafe_allow_html=True)
-st.markdown("---")
+def obtener_fecha_ordenamiento(record):
+    """Extrae la fecha de resolución para usarla como clave de ordenamiento"""
+    f = record.get('fields', {})
+    fecha_raw = f.get('Resolucion', '')
+    if not fecha_raw or str(fecha_raw).strip() in ["None", "none", "nan", "NaN", ""]:
+        return datetime.min # Si no tiene fecha, lo manda al final de los finalizados
+    
+    fecha_str = str(fecha_raw).replace('-', '/').strip()
+    for formato in ['%Y/%m/%d', '%Y-%m-%d', '%d/%m/%Y']:
+        try:
+            return datetime.strptime(fecha_str, formato)
+        except ValueError:
+            continue
+    return datetime.min
 
-busqueda = st.text_input("Número de Caso o Cliente:", placeholder="Ej: 145 o Juan Pérez...").strip()
+# --- CABECERA ---
+st.markdown("<h1 style='text-align: center;'>RMA ALTAVISTA SA</h1>", unsafe_allow_html=True)
+
+# --- BARRA DE BÚSQUEDA ---
+entrada_usuario = st.text_input("Ingrese Código de Cliente o Número de RMA:", value="").strip()
+busqueda = entrada_usuario.upper() 
 
 if busqueda:
     try:
-        # CORREGIDO: Busca usando el nuevo campo de texto plano "Numero RMA texto" o el campo "Cliente"
-        formula = f"OR(FIND('{busqueda}', {{Numero RMA texto}}), FIND('{busqueda}', {{Cliente}}))"
-        resultados = table.all(formula=formula)
+        condicion_cliente = f"{{Cliente}} = '{busqueda}'"
+        if busqueda.isdigit():
+            condicion_rma = f"{{Numero RMA}} = {busqueda}"
+            formula = f"OR({condicion_cliente}, {condicion_rma})"
+        else:
+            formula = condicion_cliente
         
-        if resultados:
-            st.success(f"Se encontraron {len(resultados)} registro(s) asociado(s).")
-            st.markdown("---")
+        results = table.all(formula=formula)
+        
+        if results:
+            # --- LÓGICA DE CLASIFICACIÓN Y ORDENAMIENTO DE CASOS ---
+            en_proceso = []
+            finalizados = []
             
-            for r in resultados:
-                f = r.get('fields', {})
+            for record in results:
+                f = record.get('fields', {})
+                es_aceptado = f.get('Aceptado') in [True, 1, "True", "true"]
+                es_finalizado = f.get('Finalizado') in [True, 1, "True", "true"]
                 
-                # Controladores de estados y visualización
-                estado_valor = str(f.get('Estado del RMA', 'PENDIENTE')).upper()
-                es_finalizado = f.get('Finalizado', False)
-                
-                # Estilos condicionales según el diagnóstico
-                diagnostico_texto = f.get('diagnostico', 'Sin diagnóstico asentado aún.')
+                if es_aceptado and not es_finalizado:
+                    en_proceso.append(record)
+                elif es_aceptado and es_finalizado:
+                    finalizados.append(record)
+                else:
+                    # Por las dudas si hay casos no aceptados aún, los agrupamos con "en proceso"
+                    en_proceso.append(record)
+            
+            # Ordenar los finalizados por fecha de 'Resolucion' (Más nuevos primero -> reverse=True)
+            finalizados.sort(key=obtener_fecha_ordenamiento, reverse=True)
+            
+            # Combinamos: Primero En Proceso, abajo los Finalizados ordenados cronológicamente
+            resultados_ordenados = en_proceso + finalizados
+            
+            # --- INTERFAZ GRÁFICA DE CONTACTO ---
+            numero_tel = "5493433002458"
+            mensaje_wa = urllib.parse.quote(f"Hola Altavista SA, tengo una consulta sobre el RMA/Cliente: {busqueda}")
+            link_wa = f"https://wa.me/{numero_tel}?text={mensaje_wa}"
+            
+            col_msg, col_ws = st.columns([2, 1])
+            with col_msg:
+                st.success(f"Se encontraron {len(resultados_ordenados)} coincidencia(s):")
+            with col_ws:
+                st.markdown(f"""
+                <a href="{link_wa}" target="_blank" style="text-decoration: none;">
+                    <div style="background-color: #25D366; color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" width="18">
+                        Contactarnos
+                    </div>
+                </a>
+                """, unsafe_allow_html=True)
+
+            # --- RENDERS DE LAS FICHAS ---
+            for index, record in enumerate(resultados_ordenados):
+                f = record['fields']
+                estado_valor = str(f.get('Estado del RMA', '')).strip().upper()
+                diagnostico_texto = f.get('diagnostico', 'Sin diagnóstico registrado.')
                 es_fuera_garantia = "FUERA DE GARANTIA" in estado_valor
                 
-                # Procesar fechas legibles
+                # Formatear las fechas a DD/MM/YYYY
                 fecha_compra = formatear_fecha_cliente(f.get('Compra'))
                 fecha_resolucion = formatear_fecha_cliente(f.get('Resolucion'))
-                fecha_ingreso = formatear_fecha_cliente(f.get('Ingreso'))
                 
-                # Renderizado de Tarjeta de Información
-                with st.container(border=True):
-                    # Mostramos el número de caso usando el campo de texto formateado de Airtable
-                    num_caso = f.get('Numero RMA texto', 'N/A')
-                    st.markdown(f"### 🔢 Caso Nº RMA: {num_caso}")
-                    
+                es_finalizado = f.get('Finalizado') in [True, 1, "True", "true"]
+                
+                if es_finalizado:
+                    titulo_ficha = f"Cliente: {f.get('Cliente', 'S/D')} - RMA: {f.get('Numero RMA', 'S/D')} | [CASO FINALIZADO]"
+                else:
+                    titulo_ficha = f"Cliente: {f.get('Cliente', 'S/D')} - RMA: {f.get('Numero RMA', 'S/D')} | [EN PROCESO]"
+                
+                debe_expandir = True
+                if len(resultados_ordenados) > 2 and index > 0:
+                    debe_expandir = False
+                
+                with st.expander(titulo_ficha, expanded=debe_expandir):
                     col1, col2 = st.columns(2)
-                    
                     with col1:
-                        st.markdown(f"**Cliente:** {f.get('Cliente', 'N/A')}")
                         st.markdown(f"**Producto:** {f.get('Producto', 'N/A')}")
-                        st.markdown(f"**Serial:** {f.get('Serial', 'N/A')}")
-                        st.markdown(f"**Fecha de Ingreso:** {fecha_ingreso}")
-                        st.markdown(f"**Fecha de Compra:** {fecha_compra}")
-                        st.markdown(f"**Motivo:** {f.get('Motivo del trámite', 'N/A')}")
+                        st.markdown(f"**Serial:** {f.get('serial', 'N/A')}")
+                        if es_fuera_garantia:
+                            st.markdown(f"**Compra:** :red[{fecha_compra}]")
+                        else:
+                            st.markdown(f"**Compra:** {fecha_compra}")
+                        st.markdown(f"**Ingreso:** {f.get('ingreso', 'N/A')}")
                     
                     with col2:
                         aceptado_icon = "✅" if f.get('Aceptado') else "❌"
